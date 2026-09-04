@@ -1,0 +1,139 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sealed Note — end-to-end encrypted sharing, made visible</title>
+<link rel="stylesheet" href="../shared/theme.css">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="wrap">
+
+<header class="page">
+  <p class="eyebrow">Portfolio demo · A1</p>
+  <h1>Sealed Note</h1>
+  <p class="lede">
+    A note-sharing tool where the server storing your note is mathematically
+    incapable of reading it. Everything below is live: encrypt on the left,
+    watch the server's actual database on the right, then open the link back
+    on this page to decrypt it.
+  </p>
+</header>
+
+<section class="panel note">
+  The key never leaves your browser. It travels to the recipient inside the
+  <strong>URL fragment</strong> (the part after <code class="inline">#</code>),
+  which browsers never send to a server. The server only ever stores and
+  serves ciphertext — see the table on the right.
+</section>
+
+<section class="grid two">
+
+  <div class="panel">
+    <h2>You (in the browser)</h2>
+    <label for="plaintext-input">Your secret note</label>
+    <textarea id="plaintext-input" rows="6"></textarea>
+
+    <div class="row" style="margin-top:.6rem;">
+      <label style="display:flex; align-items:center; gap:.4rem; margin:0;">
+        <input type="checkbox" id="burn-checkbox" style="width:auto;">
+        burn after reading (server deletes the row on first open)
+      </label>
+    </div>
+
+    <div class="row" style="margin-top:.8rem;">
+      <button id="encrypt-btn" class="primary" type="button">Encrypt and upload</button>
+    </div>
+
+    <div id="upload-result" hidden style="margin-top:1rem;">
+      <div class="grid two">
+        <div>
+          <label>AES-256 key (never sent to the server)</label>
+          <code id="gen-key-out" class="mono faint" style="word-break:break-all; display:block;"></code>
+        </div>
+        <div>
+          <label>random IV (safe to store alongside the ciphertext)</label>
+          <code id="gen-iv-out" class="mono faint" style="word-break:break-all; display:block;"></code>
+        </div>
+      </div>
+
+      <label style="margin-top:.8rem;">Share link</label>
+      <div class="link-box">
+        <input type="text" id="share-link-out" readonly>
+        <button id="copy-link-btn" type="button">copy</button>
+      </div>
+      <p class="faint fragment-callout">
+        Everything after <code class="inline">#k=</code> is the fragment. Try
+        it: open your browser's network tab, click "open the link" below, and
+        confirm no request ever carries that part.
+      </p>
+    </div>
+  </div>
+
+  <div class="panel server-hero">
+    <div class="spread">
+      <h2>What the server stores</h2>
+      <button id="clear-server-btn" type="button">clear</button>
+    </div>
+    <p class="muted faint">
+      This is a simulated server — an in-memory store running in this tab,
+      persisted to <code class="inline">localStorage</code> so it survives a
+      reload. These rows are exactly what a real backend's database would
+      contain: no plaintext, ever.
+    </p>
+    <div id="server-stats" class="grid three" style="margin:.8rem 0;"></div>
+    <div id="server-rows" class="row-list"></div>
+  </div>
+
+</section>
+
+<section id="recipient-section" class="panel">
+  <h2>Open the link</h2>
+  <p class="muted">
+    Paste a share link (or use the one generated above) to decrypt it as the
+    recipient would.
+  </p>
+  <div class="link-box">
+    <input type="text" id="recipient-link-input" placeholder="paste a sealed note link">
+    <button id="open-link-btn" class="primary" type="button">Open</button>
+  </div>
+  <div id="decrypt-result" class="result-box panel mono" hidden style="margin-top:.8rem;"></div>
+  <p class="faint" style="margin-top:.6rem;">
+    Want to see the failure path? Expand a row on the right, click
+    <strong>tamper with ciphertext</strong>, then open that row's link again —
+    decryption refuses to return anything rather than handing back garbage.
+    That is AES-GCM's authentication tag doing its job.
+  </p>
+</section>
+
+<section class="panel">
+  <h2>Live benchmark: encryption throughput</h2>
+  <p class="muted">
+    AES-GCM is hardware-accelerated on modern CPUs, so this stays fast even
+    at multi-megabyte payloads. Numbers below are measured in this browser,
+    right now, with <code class="inline">performance.now()</code> — nothing
+    is hardcoded.
+  </p>
+  <div class="row" style="margin-bottom:.6rem;">
+    <button id="run-benchmark-btn" class="primary" type="button">Run benchmark</button>
+    <span id="bench-status" class="faint"></span>
+  </div>
+  <div class="grid two">
+    <canvas id="bench-canvas" width="480" height="260"></canvas>
+    <table class="bench-table">
+      <thead><tr><th>Payload</th><th class="num">Time</th><th class="num">Throughput</th></tr></thead>
+      <tbody id="bench-table-body"></tbody>
+    </table>
+  </div>
+</section>
+
+<footer class="page">
+  Sealed Note — a portfolio demo. Client-side simulation only, see README for
+  what this is not.
+</footer>
+
+</div>
+<script type="module" src="app.js"></script>
+</body>
+</html>

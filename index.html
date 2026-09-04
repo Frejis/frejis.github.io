@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Carl-Emil Heiselberg Andersen — cryptography and programming languages</title>
+<link rel="stylesheet" href="projects/shared/theme.css">
+<link rel="stylesheet" href="projects/a9-blog/style.css">
+</head>
+<body>
+<div class="wrap">
+
+<header class="page">
+  <p class="eyebrow">Carl-Emil Heiselberg Andersen · Aarhus, Denmark</p>
+  <h1>Cryptography and programming languages, made visible</h1>
+  <p class="lede">
+    M.Sc. Computer Science from Aarhus University, specialised in cryptography
+    and programming languages. My master's thesis implemented and benchmarked
+    the GKR protocol, and I spent four semesters as a teaching assistant,
+    including Computer Architecture and Cryptology. This repository holds eight
+    interactive demos built around that work, plus a writeup for each one.
+  </p>
+  <p class="who">
+    Looking for backend, full-stack, data science, consulting or software-test
+    work in Aarhus. I work in Danish and English.
+  </p>
+</header>
+
+<section class="panel">
+  <h2>Start here</h2>
+  <p class="muted">
+    The portfolio hub introduces all eight demos, with a plain-language pitch
+    for each and a link to its writeup.
+  </p>
+  <p><a class="demo" href="projects/a9-blog/index.html">Open the portfolio</a></p>
+</section>
+
+<section>
+  <h2>Or go straight to a demo</h2>
+  <div class="quick">
+    <a class="quick-item" href="projects/a1-sealed-note/index.html">
+      <span class="name">Sealed Note</span>
+      <span class="what">Encrypted notes a server cannot read · AES-GCM</span>
+    </a>
+    <a class="quick-item" href="projects/a2-sumcheck/index.html">
+      <span class="name">Sumcheck Visualizer</span>
+      <span class="what">The protocol at the heart of the GKR thesis</span>
+    </a>
+    <a class="quick-item" href="projects/a3-type-playground/index.html">
+      <span class="name">Type Playground</span>
+      <span class="what">Hindley-Milner inference, live as you type</span>
+    </a>
+    <a class="quick-item" href="projects/a4-shrink-lab/index.html">
+      <span class="name">Shrink Lab</span>
+      <span class="what">Property-based testing, with shrinking on screen</span>
+    </a>
+    <a class="quick-item" href="projects/a5-secret-ballot/index.html">
+      <span class="name">Secret Ballot</span>
+      <span class="what">Paillier tallying without decrypting a vote</span>
+    </a>
+    <a class="quick-item" href="projects/a6-break-it/index.html">
+      <span class="name">Break It Yourself</span>
+      <span class="what">Five cryptography mistakes, attacked live</span>
+    </a>
+    <a class="quick-item" href="projects/a7-taint-analyzer/index.html">
+      <span class="name">Taint Analyzer</span>
+      <span class="what">CFG and worklist dataflow finding injections</span>
+    </a>
+    <a class="quick-item" href="projects/a8-privacy-budget/index.html">
+      <span class="name">Privacy Budget</span>
+      <span class="what">Differential privacy, spent in front of you</span>
+    </a>
+  </div>
+</section>
+
+<section class="panel">
+  <h2>Running it</h2>
+  <p class="muted">
+    Nothing to install and nothing to build. Open any
+    <code class="inline">index.html</code> from disk, or serve this folder with
+    any static server. The logic modules are DOM-free, so the tests run under
+    Node's built-in runner:
+  </p>
+  <pre>node --test "projects/&lt;slug&gt;/*.test.js"</pre>
+  <p class="faint" style="margin-top:.6rem">
+    Conventions shared by every project are in
+    <code class="inline">projects/SPEC.md</code>.
+  </p>
+</section>
+
+<footer class="page">
+  Carl-Emil Heiselberg Andersen · Aarhus, Denmark ·
+  <a href="projects/a9-blog/index.html">portfolio hub</a>
+</footer>
+
+</div>
+</body>
+</html>

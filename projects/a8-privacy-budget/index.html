@@ -1,0 +1,273 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Privacy Budget — differential privacy you can watch being spent</title>
+<link rel="stylesheet" href="../shared/theme.css">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="wrap">
+
+<header class="page">
+  <p class="eyebrow">Portfolio demo · A8</p>
+  <h1>Privacy Budget</h1>
+  <p class="lede">
+    A health registry of 2 000 people you are allowed to query, but only so
+    many times. Every answer is deliberately wrong by a measured amount, the
+    budget above drains as you ask, and when it runs out the database stops
+    answering. Turn the protection off and two harmless-looking aggregate
+    queries will name an individual and their diagnosis.
+  </p>
+</header>
+
+<section class="panel budget-hero">
+  <div class="spread">
+    <h2>Privacy budget</h2>
+    <div class="row">
+      <span id="budget-state" class="tag good">healthy</span>
+      <button id="reset-budget-btn" type="button">reset</button>
+    </div>
+  </div>
+  <p class="muted faint">
+    Total epsilon for this session, spent across every query you run.
+    <span class="term">ε is the cap on how much one person's record is allowed
+    to change any answer.</span>
+  </p>
+
+  <div class="meter" role="img" aria-label="remaining privacy budget">
+    <div class="meter-fill" id="budget-fill"></div>
+    <div class="meter-text mono" id="budget-text">ε 3.000 of 3.000 remaining</div>
+  </div>
+
+  <div class="grid three budget-stats">
+    <div class="stat"><span class="value" id="stat-remaining">3.000</span><span class="label">epsilon left</span></div>
+    <div class="stat"><span class="value" id="stat-spent">0.000</span><span class="label">epsilon spent</span></div>
+    <div class="stat"><span class="value" id="stat-queries">0</span><span class="label">queries answered</span></div>
+  </div>
+
+  <table class="ledger">
+    <thead>
+      <tr><th class="num">#</th><th>Query</th><th>Composition</th><th class="num">ε spent</th><th class="num">ε left after</th></tr>
+    </thead>
+    <tbody id="ledger-body"></tbody>
+  </table>
+  <p id="ledger-empty" class="faint">No queries yet. Run one below and the bar starts draining.</p>
+</section>
+
+<section class="grid side">
+
+  <div class="panel">
+    <h2>Ask the database</h2>
+
+    <label for="query-type">Question</label>
+    <select id="query-type">
+      <option value="count-condition">How many people have the diagnosis</option>
+      <option value="count-people">How many people are there</option>
+      <option value="mean-income">Average income</option>
+      <option value="sum-income">Total income</option>
+      <option value="hist-region">Diagnoses per region (histogram)</option>
+    </select>
+
+    <label for="region-filter" style="margin-top:.8rem;">Region</label>
+    <select id="region-filter"></select>
+
+    <div class="grid two" style="margin-top:.8rem;">
+      <div>
+        <label for="min-age">Minimum age</label>
+        <input type="number" id="min-age" min="18" max="89" value="18">
+      </div>
+      <div>
+        <label for="max-age">Maximum age</label>
+        <input type="number" id="max-age" min="18" max="89" value="89">
+      </div>
+    </div>
+
+    <div id="clamp-controls" class="grid two" style="margin-top:.8rem;">
+      <div>
+        <label for="clamp-lo">Income clamped from</label>
+        <input type="number" id="clamp-lo" step="10000" value="0">
+      </div>
+      <div>
+        <label for="clamp-hi">clamped to</label>
+        <input type="number" id="clamp-hi" step="10000" value="800000">
+      </div>
+    </div>
+
+    <label for="mechanism" style="margin-top:.8rem;">Noise</label>
+    <select id="mechanism">
+      <option value="laplace">Laplace (pure ε)</option>
+      <option value="gaussian">Gaussian (ε, δ = 1e-5)</option>
+    </select>
+
+    <label for="epsilon" style="margin-top:.9rem;">
+      Privacy setting: ε = <span id="epsilon-value" class="mono">0.50</span>
+      <span id="epsilon-mood"></span>
+    </label>
+    <input type="range" id="epsilon" min="0.01" max="5" step="0.01" value="0.5">
+    <div class="scale-ends faint"><span>0.01 — near-perfect privacy, useless answers</span><span>5 — sharp answers, weak privacy</span></div>
+
+    <div class="row" style="margin-top:1rem;">
+      <button id="run-query-btn" class="primary" type="button">Run the query</button>
+      <span id="query-status" class="faint"></span>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="spread">
+      <h2>The answer</h2>
+      <span id="answer-badge" class="tag"></span>
+    </div>
+
+    <div class="answer-pair">
+      <div class="answer true-answer">
+        <span class="label">True answer</span>
+        <span class="value mono" id="true-answer">—</span>
+        <span class="faint">shown only because this is a teaching tool. A real deployment never reveals this column.</span>
+      </div>
+      <div class="answer noisy-answer">
+        <span class="label">Released answer</span>
+        <span class="value mono" id="noisy-answer">—</span>
+        <span class="faint" id="answer-delta">what the analyst actually receives</span>
+      </div>
+    </div>
+
+    <div id="histogram-panel" hidden>
+      <h3>Per region, true against released</h3>
+      <canvas id="histogram-canvas" width="640" height="240"></canvas>
+      <p class="faint">
+        Disjoint bins, so the whole histogram costs ε once, not ε per bar.
+        <span class="term">parallel composition</span>
+      </p>
+    </div>
+
+    <table class="working">
+      <tbody id="working-body"></tbody>
+    </table>
+
+    <p id="clamp-note" class="note warn" hidden></p>
+  </div>
+
+</section>
+
+<section class="panel">
+  <div class="spread">
+    <h2>What the noise actually looks like</h2>
+    <span class="faint">2 000 simulated releases, redrawn as you drag</span>
+  </div>
+  <p class="muted">
+    Drag epsilon and watch the answers you might have received pile up around
+    the truth. This is the whole trade-off in one picture: wide and safe on the
+    left, narrow and revealing on the right. Simulating costs nothing — no
+    real release happens here, so the budget is untouched.
+  </p>
+
+  <div class="explorer">
+    <div>
+      <label for="explorer-epsilon">
+        ε = <span id="explorer-epsilon-value" class="mono">0.50</span>
+      </label>
+      <input type="range" id="explorer-epsilon" min="0.01" max="5" step="0.01" value="0.5">
+      <div class="grid two explorer-stats">
+        <div class="stat"><span class="value mono" id="explorer-true">—</span><span class="label">true answer</span></div>
+        <div class="stat"><span class="value mono" id="explorer-spread">—</span><span class="label">80% of answers land within</span></div>
+      </div>
+      <p class="faint">
+        Query: number of people with the diagnosis in Midtjylland.
+        Sensitivity 1, so the Laplace scale is b = 1/ε.
+      </p>
+    </div>
+    <canvas id="explorer-canvas" width="760" height="300"></canvas>
+  </div>
+</section>
+
+<section class="panel attack-panel" id="attack-panel">
+  <div class="spread">
+    <h2>Why any of this is necessary</h2>
+    <label class="switch">
+      <input type="checkbox" id="privacy-toggle" checked>
+      <span id="privacy-label">Differential privacy: ON</span>
+    </label>
+  </div>
+  <p class="muted">
+    Two queries no reviewer would object to:
+    <span class="mono">count of diagnoses in a region</span>, and the same
+    count <span class="mono">excluding one age in one postcode</span>. Neither
+    query names anybody. Their difference does.
+  </p>
+
+  <div class="row">
+    <button id="run-attack-btn" class="danger" type="button">Run the attack</button>
+    <button id="attack-curve-btn" type="button">Chart success rate against ε</button>
+    <span id="attack-status" class="faint"></span>
+  </div>
+
+  <div id="attack-result" class="attack-result" hidden></div>
+
+  <div class="grid two" style="margin-top:1rem;">
+    <div>
+      <canvas id="attack-canvas" width="560" height="280"></canvas>
+      <p class="faint">
+        500 attack attempts at each ε, measured live. 0.5 is a coin flip:
+        the attacker has learned nothing.
+      </p>
+    </div>
+    <table class="attack-table">
+      <thead><tr><th class="num">ε per query</th><th class="num">Attacker correct</th><th>Verdict</th></tr></thead>
+      <tbody id="attack-table-body"></tbody>
+    </table>
+  </div>
+</section>
+
+<section class="panel">
+  <div class="spread">
+    <h2>How wrong is the answer, really</h2>
+    <button id="run-bench-btn" class="primary" type="button">Run the benchmark</button>
+  </div>
+  <p class="muted">
+    Mean absolute error of the noisy count, measured over 300 runs at each
+    epsilon in this browser. The dashed line is the theory:
+    E|Laplace(0, b)| = b = sensitivity / ε. Nothing here is hardcoded.
+  </p>
+  <div class="grid two">
+    <canvas id="bench-canvas" width="560" height="300"></canvas>
+    <table>
+      <thead><tr><th class="num">ε</th><th class="num">Measured error</th><th class="num">Theory</th><th class="num">Error vs answer</th></tr></thead>
+      <tbody id="bench-table-body"></tbody>
+    </table>
+  </div>
+  <p id="bench-status" class="faint"></p>
+</section>
+
+<section class="panel">
+  <h2>You can still do real analysis</h2>
+  <p class="muted">
+    The point of a privacy budget is not to stop the work. Below is average
+    income by region, released under differential privacy at the ε on the
+    right, next to the truth. At sensible epsilon the shape of the finding
+    survives; at very small epsilon it does not, and an honest analyst has to
+    say so.
+  </p>
+  <div class="row" style="margin-bottom:.8rem;">
+    <label for="analysis-epsilon" style="margin:0;">ε per region: <span id="analysis-epsilon-value" class="mono">1.00</span></label>
+    <input type="range" id="analysis-epsilon" min="0.05" max="5" step="0.05" value="1" style="max-width:280px;">
+    <span class="faint">disjoint regions, so this costs ε once in total</span>
+  </div>
+  <canvas id="analysis-canvas" width="900" height="300"></canvas>
+  <table style="margin-top:.8rem;">
+    <thead><tr><th>Region</th><th class="num">People</th><th class="num">True mean income</th><th class="num">Released</th><th class="num">Difference</th></tr></thead>
+    <tbody id="analysis-table-body"></tbody>
+  </table>
+</section>
+
+<footer class="page">
+  Privacy Budget — a portfolio demo. The 2 000 records are synthetic, generated
+  from a fixed seed in <code class="inline">data.js</code>; no real person is in
+  this page. See the README for what this is not.
+</footer>
+
+</div>
+<script type="module" src="app.js"></script>
+</body>
+</html>

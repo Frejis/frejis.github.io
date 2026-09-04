@@ -1,0 +1,179 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Secret Ballot — votes counted without ever being read</title>
+<link rel="stylesheet" href="../shared/theme.css">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="wrap">
+
+<header class="page">
+  <p class="eyebrow">Portfolio demo · A5</p>
+  <h1>Secret Ballot</h1>
+  <p class="lede">
+    A poll where the server adds up every vote without ever being able to
+    read a single one. Each ballot below is a real
+    <a href="#how" class="mono">Paillier</a> ciphertext — an enormous,
+    genuinely unreadable integer — and the tally at the bottom is computed by
+    multiplying those integers together, never by decrypting a ballot.
+  </p>
+</header>
+
+<section class="panel note">
+  This uses a cryptosystem that is <strong>additively homomorphic</strong>:
+  <code class="inline">decrypt(encrypt(a) × encrypt(b)) = a + b</code>. The
+  server can combine votes it cannot read into a total it can. Modulus size
+  is kept small (default 512-bit) so key generation stays interactive — see
+  "what this is not" in the README for why that would not fly in production.
+</section>
+
+<section class="panel" id="identity-demo">
+  <h2>The property that makes this work</h2>
+  <p class="muted">
+    Pick two small numbers. This encrypts each one, multiplies the
+    ciphertexts together <em>modulo n²</em>, and decrypts the product — with
+    the actual numbers on screen, not a diagram.
+  </p>
+  <div class="row" style="margin-bottom:.8rem;">
+    <label style="width:auto;">a
+      <input type="number" id="identity-a" value="7" min="0" max="999" style="width:5rem;">
+    </label>
+    <label style="width:auto;">b
+      <input type="number" id="identity-b" value="13" min="0" max="999" style="width:5rem;">
+    </label>
+    <button id="identity-run-btn" class="primary" type="button">encrypt, combine, decrypt</button>
+  </div>
+  <div class="identity-grid mono" id="identity-output"></div>
+</section>
+
+<section class="panel">
+  <div class="spread">
+    <h2>The poll</h2>
+    <span class="faint" id="poll-question">Best build system for a weekend project?</span>
+  </div>
+  <p class="muted">
+    15 simulated voters have already cast encrypted ballots. Cast your own —
+    it is encrypted in your browser before it ever joins the board below.
+  </p>
+  <div class="row" id="cast-vote-row">
+    <label style="width:auto;">your alias
+      <input type="text" id="voter-alias-input" style="width:10rem;">
+    </label>
+    <select id="option-select"></select>
+    <button id="cast-vote-btn" class="primary" type="button">encrypt and cast</button>
+    <span class="faint" id="cast-status"></span>
+  </div>
+</section>
+
+<section class="panel">
+  <div class="spread">
+    <h2>The public bulletin board</h2>
+    <span class="faint" id="board-count"></span>
+  </div>
+  <p class="muted">
+    Every ballot, in full public view. Each row holds one ciphertext per
+    option — anyone can read these integers; nobody can turn one back into a
+    vote without the private key. Click a ciphertext to expand it.
+  </p>
+  <div class="board-scroll">
+    <table id="board-table">
+      <thead>
+        <tr id="board-header-row"></tr>
+      </thead>
+      <tbody id="board-tbody"></tbody>
+    </table>
+  </div>
+</section>
+
+<section class="panel" id="cheat-panel">
+  <h2>Try to cheat / what an attacker sees</h2>
+  <div class="grid two">
+    <div>
+      <h3>Read a ballot without the key</h3>
+      <p class="muted faint">
+        Pick a row from the board. This shows exactly what someone with
+        read access to the database — but not the private key — has to
+        work with.
+      </p>
+      <select id="attacker-ballot-select"></select>
+      <pre id="attacker-view"></pre>
+    </div>
+    <div>
+      <h3>Same vote, twice</h3>
+      <p class="muted faint">
+        Encrypt the same option twice. The two ciphertexts differ every
+        time — fresh randomness is mixed in on each call — so nobody
+        watching the board can tell two voters chose the same option, or
+        even that a voter voted the same way as before.
+      </p>
+      <button id="same-vote-btn" type="button">encrypt option 0 twice</button>
+      <div class="same-vote-grid mono" id="same-vote-output"></div>
+    </div>
+  </div>
+</section>
+
+<section class="panel" id="tally-panel">
+  <h2>Tally without decrypting</h2>
+  <p class="muted">
+    Walk through the homomorphic sum: for each option, multiply every
+    ballot's ciphertext for that option together, one at a time. Only the
+    <em>final</em> product per option is ever decrypted.
+  </p>
+  <div class="row" style="margin-bottom:.8rem;">
+    <button id="tally-run-btn" class="primary" type="button">tally without decrypting</button>
+    <span class="faint" id="tally-status"></span>
+  </div>
+  <div id="tally-accumulator" class="mono"></div>
+  <canvas id="tally-canvas" width="560" height="260" style="display:none;"></canvas>
+</section>
+
+<section class="panel" id="verify-panel">
+  <h2>Verify the result</h2>
+  <p class="muted">
+    Anyone with the public and private key can re-run the tally from the
+    public board and check it against the announced result — no need to
+    trust the tallying party. Corrupt a ballot to see verification catch it.
+  </p>
+  <div class="row">
+    <button id="verify-run-btn" type="button">re-verify tally</button>
+    <button id="corrupt-run-btn" class="danger" type="button">corrupt a ballot</button>
+    <span id="verify-status" class="faint"></span>
+  </div>
+</section>
+
+<section class="panel" id="how">
+  <h2>Live benchmark: cost of each Paillier operation</h2>
+  <p class="muted">
+    Key generation, encryption, homomorphic addition and decryption, timed
+    with <code class="inline">performance.now()</code> at several modulus
+    sizes, right now in this browser. Homomorphic addition is a single
+    modular multiplication — it should be dramatically cheaper than
+    encryption, which needs a full modular exponentiation.
+  </p>
+  <div class="row" style="margin-bottom:.6rem;">
+    <button id="bench-run-btn" class="primary" type="button">run benchmark</button>
+    <span id="bench-status" class="faint"></span>
+  </div>
+  <div class="grid two">
+    <canvas id="bench-canvas" width="480" height="260"></canvas>
+    <table class="bench-table">
+      <thead>
+        <tr><th>bits</th><th class="num">keygen</th><th class="num">encrypt</th><th class="num">add</th><th class="num">decrypt</th></tr>
+      </thead>
+      <tbody id="bench-table-body"></tbody>
+    </table>
+  </div>
+</section>
+
+<footer class="page">
+  Secret Ballot — a portfolio demo of homomorphic tallying, not a voting
+  system. See README for what this is not.
+</footer>
+
+</div>
+<script type="module" src="app.js"></script>
+</body>
+</html>

@@ -1,0 +1,153 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sealed Note — a server that cannot read what it stores</title>
+<link rel="stylesheet" href="../../shared/theme.css">
+<link rel="stylesheet" href="../style.css">
+</head>
+<body>
+<div class="wrap">
+
+<nav class="post-nav">
+  <a href="../index.html">← All eight projects</a>
+  <span class="faint">A1 · Sealed Note</span>
+</nav>
+
+<article class="post narrow">
+  <header class="page">
+    <p class="eyebrow">Writeup · A1</p>
+    <h1>A server that cannot read what it stores</h1>
+    <div class="meta">
+      <span>7 minute read</span>
+      <span>WebCrypto · AES-GCM · AEAD</span>
+    </div>
+    <p class="lede" style="margin-top:1rem">
+      End-to-end encryption is a claim about what someone else is unable to do.
+      That is the hardest kind of claim to put on a slide, so this demo shows
+      you the database instead.
+    </p>
+  </header>
+
+  <p><a class="demo" href="../../a1-sealed-note/index.html">Open the demo</a></p>
+
+  <h2><span class="step">1</span>The problem</h2>
+  <p>
+    "End-to-end encrypted" is a line every messaging product puts on its front
+    page, and almost nobody outside the field can tell whether a given product
+    has earned it. The property is negative: it says the operator of the
+    service cannot read your data, no matter what it wants. You cannot
+    demonstrate a negative with a screenshot of a lock icon, and a CV bullet
+    saying "implemented end-to-end encryption" is exactly as convincing as the
+    lock icon.
+  </p>
+  <p>
+    There are really only two questions worth asking of any such system. Where
+    does the key live, and what happens when the ciphertext is altered in
+    transit. Most people have never seen an honest answer to either, because
+    both live inside code they cannot see.
+  </p>
+
+  <h2><span class="step">2</span>What I built</h2>
+  <p>
+    A note-sharing page split down the middle. On the left you type a secret
+    and press "Encrypt and upload". On the right, a table titled "What the
+    server stores" gains a row: a base64url ciphertext, an IV, a timestamp, an
+    id. That is the entire record. You can read it, and it tells you nothing.
+  </p>
+  <p>
+    You then get a share link. Open it and the note decrypts in front of you.
+    The point of interest is the shape of that link: the key sits after the
+    <code class="inline">#</code>, in the URL fragment. There is also a tamper
+    button, which flips a byte in a stored ciphertext. Open the link again and
+    decryption does not return corrupted text; it refuses.
+  </p>
+
+  <h2><span class="step">3</span>How it works</h2>
+  <p>
+    A 256-bit AES-GCM key is generated in the browser with
+    <code class="inline">crypto.subtle.generateKey</code>, exported raw, and
+    base64url-encoded so it survives inside a URL. Encryption uses a fresh
+    12-byte IV from <code class="inline">crypto.getRandomValues</code> for every
+    note; the ciphertext, the IV and an id go to a
+    <code class="inline">FakeServer</code> that is an in-memory
+    <code class="inline">Map</code>, optionally mirrored to
+    <code class="inline">localStorage</code>. The key never enters that call.
+  </p>
+  <p>
+    Key placement is the first substantive decision. A fragment is resolved
+    entirely client-side: the browser strips everything from
+    <code class="inline">#</code> onward before it constructs the HTTP request.
+    So a server behind this page would not be trusted to ignore the key, it
+    would structurally never receive it. That is a different and much stronger
+    statement, and it is the reason the fragment is not merely a stylistic
+    choice over a query parameter.
+  </p>
+  <p>
+    The second decision is AEAD rather than plain encryption. AES-GCM
+    authenticates while it encrypts: a 128-bit tag over the ciphertext is
+    verified before any plaintext is returned. Flip one bit anywhere in the
+    ciphertext, the IV or the tag, and
+    <code class="inline">crypto.subtle.decrypt</code> rejects the whole message
+    rather than handing back a plausible-looking corruption. Most people have
+    only ever seen the failure mode of unauthenticated encryption, which is
+    garbage output that a program will happily go on to parse. The tamper
+    button exists to show the difference between confidentiality and
+    confidentiality plus integrity, which is the actual cryptographic content
+    of the demo.
+  </p>
+  <p>
+    Burn-after-reading is modelled as a one-shot <code class="inline">get()</code>:
+    the record is removed from the map as it is handed out, so the second read
+    finds nothing.
+  </p>
+
+  <h2><span class="step">4</span>What was hard</h2>
+  <p>
+    The interesting difficulty was not the cryptography, which is four
+    WebCrypto calls. It was proving the claim rather than asserting it. A demo
+    that says "the server cannot read this" is worth nothing; a demo that shows
+    you the stored row is worth something. That pushed the architecture: the
+    project was originally scoped as a C#/ASP.NET backend on Azure, and
+    replacing it with a client-side simulated server was a deliberate downgrade
+    in realism for a large gain in legibility. A real backend cannot display
+    its own database contents live without also shipping an admin panel, and
+    the admin panel would then be the thing you were being asked to trust.
+  </p>
+  <p>
+    The tests carry the same idea. Besides the round-trips, there is one that
+    takes the stored record and asserts no fragment of the plaintext appears
+    anywhere in it. That test would fail loudly if someone later "helpfully"
+    added a title or a preview field to the server record.
+  </p>
+
+  <h2><span class="step">5</span>What it is not</h2>
+  <ul>
+    <li><strong>The server is a simulation.</strong> No network, no database,
+      no deployment. Everything is a <code class="inline">Map</code> in one
+      tab.</li>
+    <li><strong>The key in the URL is a trade-off, not a solved problem.</strong>
+      It never reaches a server, but it does land in browser history, in any
+      URL-logging extension, and in the referrer of wherever the link is
+      pasted.</li>
+    <li><strong>Burn-after-reading here has no replay guarantee.</strong> It is
+      the shape of the feature without the network round-trip that would make
+      it enforceable.</li>
+    <li><strong>No rate limiting, no authentication, no TLS story, no key
+      rotation, no forward secrecy, no multiple recipients.</strong> One key,
+      one note, one AES-GCM call.</li>
+  </ul>
+
+  <div class="readmore">
+    <a class="demo" href="../../a1-sealed-note/index.html">Open the demo</a>
+    <a class="writeup" href="../../a1-sealed-note/README.md">Read the README</a>
+    <a class="writeup" href="../index.html">Back to all eight projects</a>
+  </div>
+</article>
+
+<footer class="page">Carl-Emil Heiselberg Andersen · Aarhus, Denmark</footer>
+
+</div>
+</body>
+</html>

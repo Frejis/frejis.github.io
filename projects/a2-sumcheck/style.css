@@ -1,0 +1,112 @@
+/* a2-sumcheck: only what the theme does not already cover. */
+
+.controls {
+  display: grid;
+  grid-template-columns: 200px 1fr 1fr auto;
+  gap: 1rem;
+  align-items: end;
+}
+.controls .row.nowrap { flex-wrap: nowrap; }
+.controls output { min-width: 1.5rem; text-align: right; }
+.controls .actions button { white-space: nowrap; }
+
+/* ---------- key/value list ---------- */
+
+.kv { display: grid; gap: .1rem; }
+.kv-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: .35rem 0;
+  border-bottom: 1px solid var(--border);
+}
+.kv-row .k { color: var(--text-dim); font-size: .85rem; }
+.kv-row .v { font-size: .875rem; word-break: break-all; text-align: right; }
+.kv-row .v.changed { color: var(--accent); }
+
+#check-eq, #final-eq { white-space: pre-wrap; line-height: 1.7; }
+#check-eq em, #final-eq em { color: var(--accent); font-style: normal; }
+
+/* ---------- work bars ---------- */
+
+.bar-block { display: grid; gap: .3rem; }
+.bar-label {
+  display: flex;
+  justify-content: space-between;
+  font-size: .8rem;
+  color: var(--text-dim);
+}
+.bar-label + .bar { margin-bottom: .6rem; }
+.bar {
+  height: 14px;
+  background: var(--bg-inset);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  overflow: hidden;
+}
+.fill {
+  display: block;
+  height: 100%;
+  width: 0;
+  transition: width .3s ease;
+}
+.fill.prover { background: var(--alt); }
+.fill.verifier { background: var(--good); min-width: 2px; }
+
+/* ---------- hypercube ---------- */
+
+.cube-panel { height: 100%; }
+.cube {
+  display: grid;
+  gap: 3px;
+  margin: .9rem 0;
+  grid-template-columns: repeat(auto-fill, minmax(var(--cell, 74px), 1fr));
+}
+.cell {
+  background: var(--bg-inset);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: .3rem .35rem;
+  font-family: var(--mono);
+  overflow: hidden;
+  transition: opacity .3s, transform .3s, border-color .3s;
+}
+.cell .bits { font-size: .62rem; color: var(--text-faint); letter-spacing: .06em; }
+.cell .val { font-size: .72rem; color: var(--text); }
+.cell.half-zero { border-color: var(--accent-dim); }
+.cell.half-one { border-color: #4a2f6b; }
+.cell.folded { border-color: var(--border-strong); background: #12161d; }
+.cell.dead { opacity: .12; transform: scale(.9); }
+
+/* dense mode: past v = 8 the numbers stop fitting, so show intensity only */
+.cube.dense { gap: 2px; }
+.cube.dense .cell { padding: 0; aspect-ratio: 1; min-height: 8px; border-radius: 2px; }
+.cube.dense .cell .bits, .cube.dense .cell .val { display: none; }
+
+.legend { margin-top: .5rem; font-size: .78rem; color: var(--text-faint); gap: 1rem; }
+.legend span { display: flex; align-items: center; gap: .35rem; }
+.swatch {
+  width: 10px; height: 10px; border-radius: 2px;
+  border: 1px solid var(--border-strong);
+  display: inline-block;
+}
+.swatch.zero { border-color: var(--accent); background: var(--accent-dim); }
+.swatch.one { border-color: var(--alt); background: #33224d; }
+.swatch.fixed { border-color: var(--border-strong); background: #12161d; }
+
+/* ---------- benchmark ---------- */
+
+#bench-chart {
+  width: 100%;
+  height: auto;
+  margin-top: 1rem;
+  background: var(--bg-inset);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+}
+#bench-table { margin-top: 1rem; }
+
+@media (max-width: 900px) {
+  .controls { grid-template-columns: 1fr; }
+  .cube { --cell: 58px; }
+}

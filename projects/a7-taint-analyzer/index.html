@@ -1,0 +1,131 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Taint Analyzer — dataflow analysis you can watch converge</title>
+<link rel="stylesheet" href="../shared/theme.css">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="wrap">
+
+<header class="page">
+  <p class="eyebrow">Portfolio demo · A7</p>
+  <h1>Taint Analyzer</h1>
+  <p class="lede">
+    Paste code in, and this proves whether untrusted input can reach a
+    dangerous sink — a database query, <code class="inline">eval</code>,
+    <code class="inline">innerHTML</code> — without being sanitized first,
+    and shows the exact path the data took. Underneath: a real control-flow
+    graph and a worklist dataflow analysis, both drawn on screen instead of
+    hidden in a report.
+  </p>
+</header>
+
+<section class="panel">
+  <div class="spread">
+    <h2>Examples</h2>
+    <span class="faint">click one, then Analyze</span>
+  </div>
+  <div id="example-buttons" class="row"></div>
+</section>
+
+<section class="grid side">
+
+  <div class="panel">
+    <h2>Source</h2>
+    <div class="editor">
+      <div id="gutter" class="gutter mono"></div>
+      <textarea id="code-input" spellcheck="false" rows="16"></textarea>
+    </div>
+    <div class="row" style="margin-top:.8rem;">
+      <label for="analysis-select" style="margin:0; width:auto;">Analysis</label>
+      <select id="analysis-select" style="width:auto;">
+        <option value="taint">Taint tracking (sources → sinks)</option>
+        <option value="reaching">Reaching definitions</option>
+      </select>
+      <button id="analyze-btn" class="primary" type="button">Analyze</button>
+    </div>
+    <p id="parse-error" class="note warn" hidden></p>
+  </div>
+
+  <div class="panel">
+    <h2 id="findings-heading">Findings</h2>
+    <p class="muted faint" id="findings-blurb">
+      Sinks that receive tainted data without passing through a sanitizer
+      first. Click a finding to highlight its witness path.
+    </p>
+    <div id="findings-list"></div>
+  </div>
+
+</section>
+
+<section class="panel">
+  <div class="spread">
+    <h2>Control-flow graph</h2>
+    <p class="faint">blocks coloured by lattice state · click a finding to animate its witness path</p>
+  </div>
+  <div id="cfg-container"></div>
+  <div id="cfg-legend" class="row faint" style="margin-top:.6rem;"></div>
+</section>
+
+<section class="panel">
+  <div class="spread">
+    <h2>Fixed-point stepper</h2>
+    <span class="faint">watch the worklist algorithm converge, one block visit at a time</span>
+  </div>
+  <p class="muted">
+    Each step below is one block being pulled off the worklist and
+    re-processed. Its IN set is the union (join) of its predecessors' OUT
+    sets; its OUT set is what falls out after running every statement in the
+    block. When a block's OUT set stops changing, it stops re-queueing its
+    successors — that is the fixed point.
+  </p>
+  <div class="row" style="margin:.6rem 0;">
+    <button id="step-first-btn" type="button">⏮ first</button>
+    <button id="step-prev-btn" type="button">◀ prev</button>
+    <button id="step-next-btn" type="button">next ▶</button>
+    <button id="step-last-btn" type="button">last ⏭</button>
+    <span id="step-counter" class="mono faint"></span>
+  </div>
+  <input type="range" id="step-slider" min="0" max="0" value="0">
+  <div id="step-detail" class="panel step-detail" style="margin-top:.8rem;"></div>
+</section>
+
+<section class="panel">
+  <h2>Stats and benchmark</h2>
+  <p class="muted">
+    Measured on the program currently loaded, plus a live comparison across
+    every bundled example — nothing here is hardcoded, it is recomputed with
+    <code class="inline">performance.now()</code> each time you analyze.
+  </p>
+  <div id="stats-grid" class="grid three" style="margin:.8rem 0;"></div>
+  <div class="row" style="margin-bottom:.6rem;">
+    <button id="run-benchmark-btn" type="button">Run benchmark across examples</button>
+    <span id="bench-status" class="faint"></span>
+  </div>
+  <canvas id="bench-canvas" width="900" height="220"></canvas>
+  <div id="bench-legend" class="row faint" style="margin-top:.6rem;"></div>
+</section>
+
+<section class="panel">
+  <h2>What "sound" means here</h2>
+  <p class="muted" id="soundness-blurb">
+    An analysis like this can be <strong>sound</strong> (never miss a real
+    bug) or <strong>precise</strong> (never raise a false alarm) but rarely
+    both. This one is built sound-leaning: see the README for exactly where
+    it over-approximates, and what it flat out cannot see.
+  </p>
+</section>
+
+<footer class="page">
+  Taint Analyzer — a portfolio demo. Static analysis over a small parsed
+  language, entirely client-side. See README for soundness and precision
+  discussion.
+</footer>
+
+</div>
+<script type="module" src="app.js"></script>
+</body>
+</html>

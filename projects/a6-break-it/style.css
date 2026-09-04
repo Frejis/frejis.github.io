@@ -1,0 +1,281 @@
+/* Break It Yourself — project-specific styling only. Shared look: theme.css. */
+
+.attack-nav {
+  display: flex;
+  gap: .5rem;
+  flex-wrap: wrap;
+  margin-bottom: 1.5rem;
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  padding: .6rem 0;
+  background: var(--bg);
+  border-bottom: 1px solid var(--border);
+}
+.attack-nav a {
+  font-family: var(--mono);
+  font-size: .78rem;
+  text-decoration: none;
+  padding: .25rem .55rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text-dim);
+}
+.attack-nav a:hover { border-color: var(--accent); color: var(--accent); }
+
+.attack { margin-bottom: 1.5rem; }
+
+.attack-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+  margin-bottom: .75rem;
+}
+.attack-head h2 { margin-bottom: .3rem; }
+.tags { display: flex; gap: .35rem; flex-wrap: wrap; flex-shrink: 0; }
+
+.mistake {
+  margin: 0;
+  color: var(--bad);
+  font-size: .9rem;
+}
+.mistake .term {
+  display: block;
+  color: var(--text-faint);
+  font-family: var(--mono);
+  font-size: .75rem;
+  margin-top: .15rem;
+}
+
+.fix {
+  margin: 1rem 0 0;
+  border-left: 3px solid var(--good);
+  background: #10281a;
+  padding: .6rem .8rem;
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+  font-size: .88rem;
+}
+.fix strong { color: var(--good); }
+
+/* ---------- shared bits ---------- */
+
+.progress {
+  height: 4px;
+  background: var(--bg-inset);
+  border-radius: 2px;
+  overflow: hidden;
+  margin: .6rem 0;
+}
+.progress .bar {
+  height: 100%;
+  width: 0;
+  background: var(--accent);
+  transition: width .1s linear;
+}
+
+.stat-strip { margin-top: .9rem; gap: 1.25rem; display: flex; flex-wrap: wrap; }
+.stat-strip .stat .value { font-size: 1.2rem; }
+
+.verdict { font-size: .9rem; margin: .6rem 0 0; min-height: 1.4rem; }
+.verdict.ok { color: var(--good); }
+.verdict.fail { color: var(--bad); }
+
+.ok { color: var(--good); }
+.fail { color: var(--bad); }
+
+.inline-label { margin: 0; flex-shrink: 0; }
+.row input[type="range"] { flex: 1; min-width: 120px; }
+
+/* ---------- 1. ECB ---------- */
+
+.ecb-canvases figure { margin: 0; }
+.ecb-canvases canvas {
+  width: 100%;
+  image-rendering: pixelated;
+  background: var(--bg-inset);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+}
+.ecb-canvases figcaption {
+  font-size: .8rem;
+  color: var(--text-dim);
+  margin-top: .4rem;
+}
+
+/* ---------- 2. two-time pad ---------- */
+
+.offset-label { margin-top: .7rem; }
+
+.crib-readout {
+  margin-top: .7rem;
+  display: flex;
+  flex-direction: column;
+  gap: .35rem;
+}
+.crib-line { display: flex; gap: .5rem; align-items: flex-start; }
+.crib-line pre {
+  flex: 1;
+  white-space: pre;
+  overflow-x: auto;
+  padding: .5rem .6rem;
+  font-size: .8rem;
+}
+.crib-tag {
+  font-family: var(--mono);
+  font-size: .7rem;
+  color: var(--text-faint);
+  padding-top: .55rem;
+  width: 2.5rem;
+  flex-shrink: 0;
+}
+.crib-hit { color: var(--alt); background: #2a1f3d; }
+
+/* min-width lets the column shrink below the widest recovered line, so the
+   sideways scroll stays inside this box instead of widening the page. */
+.recovered {
+  margin-top: .7rem;
+  display: flex;
+  flex-direction: column;
+  gap: .3rem;
+  font-family: var(--mono);
+  font-size: .78rem;
+  max-height: 260px;
+  min-width: 0;
+  overflow-x: auto;
+  overflow-y: auto;
+}
+.recovered .line {
+  background: var(--bg-inset);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: .35rem .5rem;
+  white-space: pre;
+  /* Lines are a fixed 61 characters. Below about 700px that is wider than the
+     column, so keep them at full length and let .recovered scroll rather than
+     clipping the plaintext the attack just recovered. */
+  min-width: max-content;
+}
+.recovered .line .right { color: var(--good); }
+.recovered .line .wrong { color: var(--bad); }
+
+/* ---------- 3. padding oracle ---------- */
+
+.guess-grid {
+  display: grid;
+  grid-template-columns: repeat(32, 1fr);
+  gap: 1px;
+  margin: .7rem 0;
+  min-height: 64px;
+}
+.guess-grid span {
+  aspect-ratio: 1;
+  background: var(--bg-inset);
+  border-radius: 1px;
+}
+.guess-grid span.tried { background: var(--border-strong); }
+.guess-grid span.hit { background: var(--good); }
+
+.plaintext-out {
+  min-height: 6rem;
+  white-space: pre-wrap;
+  word-break: break-all;
+  font-size: .85rem;
+}
+.plaintext-out .known { color: var(--good); }
+.plaintext-out .unknown { color: var(--text-faint); }
+.plaintext-out .active { color: var(--warn); background: #3a2d0d; }
+
+.block-strip {
+  display: flex;
+  gap: .3rem;
+  flex-wrap: wrap;
+  margin-top: .6rem;
+}
+.block-strip .blk {
+  font-family: var(--mono);
+  font-size: .7rem;
+  padding: .15rem .4rem;
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  color: var(--text-faint);
+}
+.block-strip .blk.done { color: var(--good); border-color: var(--good); }
+.block-strip .blk.busy { color: var(--warn); border-color: var(--warn); }
+
+/* ---------- 4. length extension ---------- */
+
+.byte-view {
+  font-family: var(--mono);
+  font-size: .74rem;
+  line-height: 1.5;
+  background: var(--bg-inset);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: .6rem;
+  word-break: break-all;
+  max-height: 200px;
+  overflow-y: auto;
+}
+.byte-view .seg-original { color: var(--text); }
+.byte-view .seg-glue { color: var(--warn); background: #3a2d0d; }
+.byte-view .seg-suffix { color: var(--alt); background: #2a1f3d; }
+
+.legend { display: flex; gap: .9rem; flex-wrap: wrap; font-size: .74rem; margin-top: .4rem; }
+.legend span::before {
+  content: "";
+  display: inline-block;
+  width: .6rem;
+  height: .6rem;
+  border-radius: 2px;
+  margin-right: .3rem;
+}
+.legend .l-original::before { background: var(--text-dim); }
+.legend .l-glue::before { background: var(--warn); }
+.legend .l-suffix::before { background: var(--alt); }
+
+.mac-row {
+  display: flex;
+  gap: .5rem;
+  align-items: baseline;
+  font-family: var(--mono);
+  font-size: .74rem;
+  margin-top: .5rem;
+  word-break: break-all;
+}
+.mac-row .label { color: var(--text-faint); flex-shrink: 0; width: 5.5rem; }
+
+/* ---------- 5. timing ---------- */
+
+.switch { display: flex; align-items: center; gap: .5rem; margin: 0; font-size: .85rem; }
+.switch input { width: auto; }
+
+#timing-canvas {
+  width: 100%;
+  background: var(--bg-inset);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+}
+
+.token-readout { display: flex; gap: .5rem; align-items: center; margin-top: .7rem; }
+.token-readout pre {
+  flex: 1;
+  font-size: 1rem;
+  letter-spacing: .15em;
+  padding: .5rem .6rem;
+}
+.token-readout .found { color: var(--good); }
+.token-readout .pending { color: var(--text-faint); }
+
+/* ---------- summary ---------- */
+
+.summary td:last-child { color: var(--good); }
+
+@media (max-width: 900px) {
+  .attack-head { flex-direction: column; }
+  /* Grid items default to min-width:auto, so the un-wrappable pre content
+     inside a column would otherwise widen the whole track past the viewport. */
+  .grid.two > * { min-width: 0; }
+  .guess-grid { grid-template-columns: repeat(16, 1fr); }
+  .attack-nav { position: static; }
+}

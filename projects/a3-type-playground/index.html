@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Type playground - a language that works out its own types</title>
+<link rel="stylesheet" href="../shared/theme.css">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="wrap">
+
+<header class="page">
+  <p class="eyebrow">Hindley-Milner type inference</p>
+  <h1>A small language that works out its own types</h1>
+  <p class="lede">
+    Nothing below is annotated with a type, and yet every name has one. Type the program,
+    and the checker figures out what everything must be, complains precisely when it cannot,
+    and then runs it. Edit the code and watch the answers change as you type.
+  </p>
+</header>
+
+<section>
+  <div class="row" id="examples" role="group" aria-label="Example programs"></div>
+  <p class="faint" id="example-note">Pick an example, or write your own.</p>
+</section>
+
+<section class="grid side">
+  <div class="stack">
+    <div class="panel headline">
+      <div class="stat">
+        <span class="label">The program has type</span>
+        <span class="value" id="program-type">&mdash;</span>
+      </div>
+      <div class="stat">
+        <span class="label">and evaluates to</span>
+        <span class="value" id="program-value">&mdash;</span>
+      </div>
+    </div>
+
+    <div class="panel" id="error-panel" hidden>
+      <h3 class="bad-title">The checker will not accept this</h3>
+      <p id="error-message"></p>
+      <pre id="error-excerpt" aria-label="Where the error is"></pre>
+      <p class="faint" id="error-phase"></p>
+    </div>
+
+    <div class="panel">
+      <h2>Every name, and what it must be</h2>
+      <p class="faint">The types of each <code class="inline">let</code> binding, worked out rather than written down.</p>
+      <table>
+        <thead><tr><th>Name</th><th>Inferred type</th></tr></thead>
+        <tbody id="bindings"></tbody>
+      </table>
+      <p class="faint" id="bindings-empty" hidden>This program has no named bindings.</p>
+    </div>
+  </div>
+
+  <div class="stack">
+    <div class="panel editor-panel">
+      <div class="spread">
+        <h2>The program</h2>
+        <span class="tag" id="status">ready</span>
+      </div>
+      <div class="editor" id="editor">
+        <pre class="highlight" id="highlight" aria-hidden="true"></pre>
+        <textarea id="source" spellcheck="false" autocomplete="off" autocapitalize="off"
+                  aria-label="Program source"></textarea>
+      </div>
+      <p class="faint">
+        Integers, booleans, text, lists, pairs, <code class="inline">let</code>,
+        <code class="inline">let rec</code>, <code class="inline">\x -&gt; e</code>,
+        <code class="inline">if</code>, and the builtins
+        <code class="inline">map filter foldl length head tail fst snd show</code>.
+      </p>
+    </div>
+
+    <div class="panel">
+      <div class="spread">
+        <h2>How it inferred that</h2>
+        <span class="faint" id="trace-count"></span>
+      </div>
+      <p class="faint">
+        Algorithm W walks the program, invents a fresh variable for anything it does not know yet,
+        collects equations between types, and solves them. Every line below is one real step.
+      </p>
+      <ol class="trace" id="trace"></ol>
+      <p class="faint" id="trace-empty" hidden>No steps to show: the program failed before inference got going.</p>
+    </div>
+  </div>
+</section>
+
+<section class="panel">
+  <h2>What is actually happening</h2>
+  <div class="grid three">
+    <div>
+      <h3>Fresh variables</h3>
+      <p class="muted">When the checker meets <code class="inline">\x -&gt; ...</code> it has no idea what
+      <code class="inline">x</code> is, so it writes down <code class="inline">a</code> and carries on.</p>
+    </div>
+    <div>
+      <h3>Constraints</h3>
+      <p class="muted">Using <code class="inline">x</code> forces the issue. <code class="inline">x + 1</code>
+      means <code class="inline">a ~ Int</code>. Unification solves those equations, or fails with a reason.</p>
+    </div>
+    <div>
+      <h3>Generalization</h3>
+      <p class="muted">A <code class="inline">let</code>-bound function whose type still has free variables can be
+      used at several types at once. That is why <code class="inline">id 1</code> and
+      <code class="inline">id true</code> both work.</p>
+    </div>
+  </div>
+</section>
+
+<footer class="page">
+  <p>Tokenizer, parser, evaluator and Algorithm W in two dependency-free ES modules.
+  Tests: <code class="inline">node --test "projects/a3-type-playground/*.test.js"</code>.</p>
+</footer>
+
+</div>
+<script type="module" src="app.js"></script>
+</body>
+</html>

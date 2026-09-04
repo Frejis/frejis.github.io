@@ -1,0 +1,160 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Type Playground — a language that works out its own types</title>
+<link rel="stylesheet" href="../../shared/theme.css">
+<link rel="stylesheet" href="../style.css">
+</head>
+<body>
+<div class="wrap">
+
+<nav class="post-nav">
+  <a href="../index.html">← All eight projects</a>
+  <span class="faint">A3 · Type Playground</span>
+</nav>
+
+<article class="post narrow">
+  <header class="page">
+    <p class="eyebrow">Writeup · A3</p>
+    <h1>A language that works out its own types</h1>
+    <div class="meta">
+      <span>7 minute read</span>
+      <span>Hindley-Milner · unification · parsing</span>
+    </div>
+    <p class="lede" style="margin-top:1rem">
+      Type inference is the part of a compiler that feels like magic until you
+      have implemented it. This one shows its reasoning instead of just its
+      verdict.
+    </p>
+  </header>
+
+  <p><a class="demo" href="../../a3-type-playground/index.html">Open the demo</a></p>
+
+  <h2><span class="step">1</span>The problem</h2>
+  <p>
+    Anyone who has used OCaml, Haskell, Elm, or the annotation-free corners of
+    TypeScript, Rust and Swift has relied on Hindley-Milner inference. Very few
+    have watched it work. From the outside it is a black box that either stays
+    quiet or produces a message about type variables you never wrote. When it
+    is quiet, it looks like it did nothing. When it complains, it looks
+    arbitrary.
+  </p>
+  <p>
+    "Understands type systems" on a CV is unfalsifiable. The falsifiable
+    version is a working inference engine that you can feed a broken program
+    and have it point at the right token with a sentence that makes sense.
+  </p>
+
+  <h2><span class="step">2</span>What I built</h2>
+  <p>
+    An editor holding a small ML-like language. Nothing in the program says
+    what anything is: no <code class="inline">int n</code>, no
+    <code class="inline">: string</code>. As you type, the page re-tokenizes,
+    re-parses, re-infers and re-runs the program. It shows the inferred type of
+    the whole expression, underlines anything that cannot work, and prints the
+    result of evaluating it. A panel on the right shows the actual unification
+    steps taken to reach that conclusion, not a summary.
+  </p>
+  <p>
+    The language has <code class="inline">let</code> and
+    <code class="inline">let rec</code>, lambdas, <code class="inline">if</code>,
+    lists with <code class="inline">::</code>, pairs, string concatenation with
+    <code class="inline">++</code>, the usual arithmetic and comparison
+    operators, and builtins including <code class="inline">map</code>,
+    <code class="inline">filter</code>, <code class="inline">foldl</code>,
+    <code class="inline">length</code>, <code class="inline">head</code>,
+    <code class="inline">tail</code>, <code class="inline">fst</code>,
+    <code class="inline">snd</code> and <code class="inline">show</code>. Broken
+    examples are preloaded so there is something to look at immediately.
+  </p>
+
+  <h2><span class="step">3</span>How it works</h2>
+  <p>
+    Three passes, all in DOM-free modules so Node can test them. A hand-written
+    tokenizer attaches a source span to every token. A recursive-descent parser
+    with precedence climbing builds an AST in which every node carries the span
+    of the text it came from. Then Algorithm W: walk the AST bottom-up, invent
+    a fresh type variable wherever the type is not yet known, and emit
+    constraints of the form "these two types must be equal", each labelled with
+    the span it came from and a sentence saying what was being compared.
+  </p>
+  <p>
+    Solving the constraints is unification. Two type constructors unify when
+    their names and arities match and their arguments unify pointwise; a
+    variable unifies with anything by being substituted, subject to the occurs
+    check. That check is three lines and it is the only thing standing between
+    the engine and an infinite type when someone writes
+    <code class="inline">\x -&gt; x x</code>: <em>a</em> would have to equal
+    <em>a -&gt; b</em>, which no finite type satisfies.
+  </p>
+  <p>
+    The part that makes this Hindley-Milner rather than plain unification is
+    generalization at <code class="inline">let</code>. When a let-bound name is
+    inferred, the type variables that are free in its type but not free in the
+    surrounding environment are quantified, producing a type scheme that is
+    instantiated with fresh variables at every use site. That is why
+    <code class="inline">let id = \x -&gt; x in (id 1, id true)</code>
+    typechecks, and why the same program with <code class="inline">id</code>
+    bound by a lambda must not: a lambda parameter's type is still tied to the
+    enclosing environment, so there is nothing safe to quantify. Both
+    directions are in the test suite, because the wrong version passes the
+    happy path and only fails the counterexample.
+  </p>
+
+  <h2><span class="step">4</span>What was hard</h2>
+  <p>
+    Error messages. Textbook unification fails with "cannot unify t3 with t7",
+    which is worthless to a reader. Two things fix that. First, every
+    constraint is created carrying the span and the explanation of why it
+    exists, so a failure can be phrased in the terms on screen: "this list
+    element has type Bool, but the earlier elements have type Int". Second, on
+    a mismatch the reporter names the two <em>whole</em> types the constraint
+    started from rather than the innermost pair that happened to clash —
+    <code class="inline">[Int]</code> against <code class="inline">[Bool]</code>
+    reads far better than <code class="inline">Int</code> against
+    <code class="inline">Bool</code> when the reader is looking at two lists.
+    Each broken example has a test asserting both the span and the types named
+    in the message.
+  </p>
+  <p>
+    The other stubborn one was pixel alignment. The editor is a
+    <code class="inline">&lt;textarea&gt;</code> layered over a
+    <code class="inline">&lt;pre&gt;</code> that draws the squiggle. Both layers
+    must agree on font, size, line height, padding and wrapping exactly, or the
+    underline drifts a character off the error, which is worse than no
+    underline at all.
+  </p>
+
+  <h2><span class="step">5</span>What it is not</h2>
+  <ul>
+    <li><strong>Not a compiler.</strong> No code generation of any kind; the
+      evaluator walks the AST.</li>
+    <li><strong>No modules, records, type classes or user-defined types.</strong>
+      One expression per program and a fixed set of builtins.</li>
+    <li><strong>No overloading.</strong> <code class="inline">+</code> is
+      integers only; <code class="inline">==</code> is structural equality. A
+      real language needs type classes or ad-hoc rules here.</li>
+    <li><strong>No mutation, effects or I/O.</strong>
+      <code class="inline">show</code> returns a string, it does not print.</li>
+    <li><strong>Recursion is stopped, not analysed.</strong> A non-terminating
+      program hits a step and depth budget and is reported as a runtime error.
+      There is no totality checking.</li>
+    <li><strong>Type variables are not scoped in error messages</strong> the way
+      a mature compiler manages, so a large program's message can name a
+      variable without saying where it came from.</li>
+  </ul>
+
+  <div class="readmore">
+    <a class="demo" href="../../a3-type-playground/index.html">Open the demo</a>
+    <a class="writeup" href="../../a3-type-playground/README.md">Read the README</a>
+    <a class="writeup" href="../index.html">Back to all eight projects</a>
+  </div>
+</article>
+
+<footer class="page">Carl-Emil Heiselberg Andersen · Aarhus, Denmark</footer>
+
+</div>
+</body>
+</html>

@@ -1,0 +1,153 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Shrink Lab — the part of a fuzzer nobody shows you</title>
+<link rel="stylesheet" href="../../shared/theme.css">
+<link rel="stylesheet" href="../style.css">
+</head>
+<body>
+<div class="wrap">
+
+<nav class="post-nav">
+  <a href="../index.html">← All eight projects</a>
+  <span class="faint">A4 · Shrink Lab</span>
+</nav>
+
+<article class="post narrow">
+  <header class="page">
+    <p class="eyebrow">Writeup · A4</p>
+    <h1>The part of a fuzzer nobody shows you</h1>
+    <div class="meta">
+      <span>7 minute read</span>
+      <span>property testing · shrinking · delta debugging</span>
+    </div>
+    <p class="lede" style="margin-top:1rem">
+      Random testing is easy to explain and easy to dismiss. The part that
+      makes it usable in practice is the part that never gets demonstrated.
+    </p>
+  </header>
+
+  <p><a class="demo" href="../../a4-shrink-lab/index.html">Open the demo</a></p>
+
+  <h2><span class="step">1</span>The problem</h2>
+  <p>
+    Property-based testing sounds like a gimmick when described: throw random
+    inputs at a function and check a rule instead of writing examples. The
+    obvious objection is that random failures are useless. A test that reports
+    "this failed on
+    <code class="inline">[7,3,19,0,4,11,...]</code> with 34 more elements" has
+    told you a bug exists and given you nothing to work with.
+  </p>
+  <p>
+    The answer is shrinking, and shrinking is the piece that never appears in a
+    conference slide. Tools like QuickCheck, Hypothesis and fast-check do it
+    silently and print only the final, tidy counterexample, so the reader
+    concludes the tool got lucky. The work is in between, and it is invisible.
+  </p>
+
+  <h2><span class="step">2</span>What I built</h2>
+  <p>
+    A miniature property-based testing engine written from scratch, with the
+    shrinking step drawn on screen. Pick one of the functions under test, press
+    Run, and the page fires hundreds of seeded random inputs at it, checking a
+    property: sorting twice is the same as sorting once, reversing twice is the
+    identity, <code class="inline">decode(encode(s))</code> equals
+    <code class="inline">s</code>, binary search finds every element that is
+    present, concatenation preserves total length.
+  </p>
+  <p>
+    Some of the subjects are genuinely buggy. When one fails, the engine starts
+    simplifying the counterexample, and every candidate it tries becomes a row
+    in a table and a point on a descending chart. You watch a large array
+    collapse into the two elements that actually matter. Because the generator
+    is seeded, the whole run is reproducible.
+  </p>
+
+  <h2><span class="step">3</span>How it works</h2>
+  <p>
+    Randomness comes from a SplitMix32 PRNG, chosen for being tiny and
+    reproducible from a seed. The interesting design decision is in the
+    generators. Each one does not produce a value; it produces a
+    <code class="inline">Shrinkable</code>, which is a value plus a lazily
+    computed list of simpler <code class="inline">Shrinkable</code>s. That is
+    what makes the whole thing compose: <code class="inline">map</code>,
+    <code class="inline">filter</code>, <code class="inline">tuple</code> and
+    <code class="inline">array</code> can shrink their children without knowing
+    anything about what those children are. You cannot shrink
+    <code class="inline">23</code> toward <code class="inline">0</code> without
+    knowing it came from <code class="inline">int(0, 100)</code>, and you cannot
+    shrink an array of them without each element carrying its own shrinker.
+    Strings get it for free by being generated as arrays of character codes and
+    mapped to text.
+  </p>
+  <p>
+    Array shrinking is delta debugging in miniature. Removing one element at a
+    time is far too slow to get from forty elements to two, so the shrinker
+    first proposes the empty array, then removes contiguous chunks of size
+    n/2, halving the chunk size on each pass in the manner of ddmin, and only
+    once the length has stopped falling does it shrink individual surviving
+    elements. The search itself is greedy: it takes the first simpler candidate
+    that still fails, in generator order, and continues from there.
+  </p>
+  <p>
+    The bugs are real bugs rather than straw men.
+    <code class="inline">sort()</code> with no comparator, which sorts
+    lexicographically and so puts 10 before 9. An off-by-one on a binary search
+    loop bound, which misses elements only at particular positions. A run-length
+    encoder that silently corrupts on runs of ten or more identical characters.
+    A calendar function that treats every month except February as thirty days.
+    Each is the sort of defect that survives a handful of hand-written examples
+    and only shows up under random pressure.
+  </p>
+
+  <h2><span class="step">4</span>What was hard</h2>
+  <p>
+    Getting the shrink path to be trustworthy. It is easy to write a shrinker
+    that produces a smaller value which no longer triggers the bug, and it
+    looks fine on screen because the numbers went down. The property the code
+    must maintain is that every accepted step on the path is itself a genuine
+    failure, and that the final counterexample still fails the property. Both
+    are asserted in the tests, over the whole path, not just at the ends.
+  </p>
+  <p>
+    The chunk-removal strategy also has to be ordered carefully. If element
+    shrinking runs before length reduction, the search spends its budget
+    minimising numbers inside an array that is about to be thrown away. Length
+    first, contents second, is what turns an impractical number of candidates
+    into a handful.
+  </p>
+
+  <h2><span class="step">5</span>What it is not</h2>
+  <ul>
+    <li><strong>Not a replacement for fast-check or Hypothesis.</strong> No
+      integrated shrinking of recursive or mutually defined generators beyond
+      arrays, tuples and mapped values, no generation from types, no coverage
+      guidance.</li>
+    <li><strong>No stateful or model-based testing.</strong> Every property is
+      a pure function of freshly generated arguments, which leaves out where
+      tools like Hypothesis earn most of their keep.</li>
+    <li><strong>Shrinking is greedy, not minimal.</strong> It accepts the first
+      simpler failing candidate and moves on; a different generator order can
+      produce a different, still valid, result.</li>
+    <li><strong>The PRNG is a plain SplitMix32,</strong> chosen for speed and
+      reproducibility, not for distribution quality or cryptographic
+      strength.</li>
+    <li><strong>The size metric is a rough proxy</strong> — array or string
+      length, or a number's magnitude — used for the chart and the reduction
+      statistic, not a formal notion of counterexample complexity.</li>
+  </ul>
+
+  <div class="readmore">
+    <a class="demo" href="../../a4-shrink-lab/index.html">Open the demo</a>
+    <a class="writeup" href="../../a4-shrink-lab/README.md">Read the README</a>
+    <a class="writeup" href="../index.html">Back to all eight projects</a>
+  </div>
+</article>
+
+<footer class="page">Carl-Emil Heiselberg Andersen · Aarhus, Denmark</footer>
+
+</div>
+</body>
+</html>

@@ -1,0 +1,166 @@
+/* A9 - portfolio hub and writeups. Layout on top of shared/theme.css. */
+
+/* ---------- hub cards ---------- */
+
+.cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(320px, 100%), 1fr));
+  gap: 1rem;
+  align-items: stretch;
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: .7rem;
+  position: relative;
+  overflow: hidden;
+  transition: border-color .12s, transform .12s;
+}
+.card::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto;
+  height: 2px;
+  background: linear-gradient(90deg, var(--accent), transparent 70%);
+  opacity: .55;
+}
+.card:hover { border-color: var(--border-strong); transform: translateY(-2px); }
+
+.card .num {
+  font-family: var(--mono);
+  font-size: .72rem;
+  letter-spacing: .12em;
+  color: var(--text-faint);
+}
+.card h3 {
+  font-size: 1.1rem;
+  font-weight: 620;
+  letter-spacing: -0.01em;
+  margin: 0;
+}
+.card p.pitch {
+  margin: 0;
+  color: var(--text-dim);
+  font-size: .93rem;
+}
+.card .tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .3rem;
+  margin-top: auto;
+  padding-top: .3rem;
+}
+.card .actions {
+  display: flex;
+  align-items: center;
+  gap: .9rem;
+  padding-top: .55rem;
+  border-top: 1px solid var(--border);
+}
+
+a.demo {
+  display: inline-block;
+  font-weight: 550;
+  font-size: .9rem;
+  text-decoration: none;
+  color: #07101f;
+  background: var(--accent);
+  border: 1px solid var(--accent);
+  border-radius: var(--radius-sm);
+  padding: .4rem .8rem;
+  transition: background .12s;
+}
+a.demo:hover { background: #6ba1ff; color: #07101f; }
+
+a.writeup {
+  font-size: .88rem;
+  text-decoration: none;
+  border-bottom: 1px solid var(--accent-dim);
+}
+a.writeup:hover { border-bottom-color: var(--accent); }
+
+/* A grid child defaults to min-width:auto, so the wide `node --test` line in a
+   <pre> widens its track instead of scrolling inside the panel. */
+.grid > * { min-width: 0; }
+
+/* ---------- hub header ---------- */
+
+header.page .who {
+  margin: .9rem 0 0;
+  color: var(--text-faint);
+  font-size: .88rem;
+}
+header.page .who strong { color: var(--text-dim); font-weight: 550; }
+
+/* ---------- writeups ---------- */
+
+article.post { max-width: 720px; }
+
+article.post .meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .6rem 1rem;
+  align-items: baseline;
+  color: var(--text-faint);
+  font-size: .82rem;
+  font-family: var(--mono);
+}
+
+article.post h2 {
+  margin: 2.25rem 0 .6rem;
+  font-size: 1.05rem;
+}
+article.post h2 .step {
+  color: var(--text-faint);
+  font-family: var(--mono);
+  font-weight: 400;
+  margin-right: .5rem;
+}
+
+article.post p { margin: 0 0 1rem; }
+article.post ul { margin: 0 0 1rem; padding-left: 1.15rem; color: var(--text-dim); }
+article.post li { margin-bottom: .45rem; }
+article.post li strong { color: var(--text); font-weight: 550; }
+
+.post-nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .9rem;
+  align-items: center;
+  margin-bottom: 2rem;
+}
+
+.readmore {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .9rem;
+  align-items: center;
+  margin-top: 2.5rem;
+}
+
+/* ---------- root landing ---------- */
+
+.quick {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(220px, 100%), 1fr));
+  gap: .6rem;
+}
+a.quick-item {
+  display: block;
+  text-decoration: none;
+  color: var(--text);
+  background: var(--bg-inset);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: .6rem .75rem;
+  transition: border-color .12s, background .12s;
+}
+a.quick-item:hover { border-color: var(--accent); background: #12181f; color: var(--text); }
+a.quick-item .name { font-weight: 550; font-size: .93rem; display: block; }
+a.quick-item .what { color: var(--text-faint); font-size: .8rem; }
+
+@media (max-width: 560px) {
+  .card .actions { flex-direction: column; align-items: flex-start; gap: .55rem; }
+  a.demo { width: 100%; text-align: center; }
+}

@@ -1,0 +1,415 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Break It Yourself — five cryptography mistakes, attacked live</title>
+<link rel="stylesheet" href="../shared/theme.css">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="wrap">
+
+<header class="page">
+  <p class="eyebrow">Portfolio demo · A6</p>
+  <h1>Break It Yourself</h1>
+  <p class="lede">
+    Five ways to use good cryptographic primitives badly, each with the attack
+    that follows. Nothing here is staged: every result on this page is computed
+    in your browser by the same code the tests run against, including the AES
+    and SHA-256 implementations. Press a button and watch something break.
+  </p>
+</header>
+
+<nav class="attack-nav" aria-label="Jump to an attack">
+  <a href="#ecb">1 · ECB penguin</a>
+  <a href="#pad">2 · Nonce reuse</a>
+  <a href="#oracle">3 · Padding oracle</a>
+  <a href="#extend">4 · Length extension</a>
+  <a href="#timing">5 · Timing leak</a>
+</nav>
+
+<!-- ==================================================== 1. ECB ============ -->
+<section class="panel attack" id="ecb">
+  <div class="attack-head">
+    <div>
+      <h2>1 · The picture that survives encryption</h2>
+      <p class="mistake">
+        The mistake: encrypting with a block cipher directly, one block at a
+        time. <span class="term">AES-128 in ECB mode</span>
+      </p>
+    </div>
+    <div class="tags">
+      <span class="tag bad">total break</span>
+      <span class="tag">difficulty: none</span>
+    </div>
+  </div>
+
+  <p class="muted">
+    A block cipher maps each 16-byte block to a ciphertext block, and does it
+    the same way every time. Identical input blocks therefore produce identical
+    output blocks, so anything repetitive in the plaintext, like the flat
+    background of an image, stays visibly repetitive after encryption.
+  </p>
+
+  <div class="grid three ecb-canvases">
+    <figure>
+      <canvas id="ecb-plain" width="240" height="240"></canvas>
+      <figcaption>The original image, drawn on a canvas at load.</figcaption>
+    </figure>
+    <figure>
+      <canvas id="ecb-ecb" width="240" height="240"></canvas>
+      <figcaption>
+        <span class="fail">ECB.</span> The same pixels, genuinely AES-encrypted.
+        You can still read it.
+      </figcaption>
+    </figure>
+    <figure>
+      <canvas id="ecb-cbc" width="240" height="240"></canvas>
+      <figcaption>
+        <span class="ok">CBC.</span> Same key, same image, chained blocks.
+        Noise.
+      </figcaption>
+    </figure>
+  </div>
+
+  <div class="row">
+    <button id="ecb-run" class="primary" type="button">Encrypt the image</button>
+    <button id="ecb-shape" type="button">Draw a different image</button>
+    <span id="ecb-status" class="faint" role="status"></span>
+  </div>
+
+  <div class="progress" id="ecb-progress" hidden><div class="bar"></div></div>
+
+  <div id="ecb-stats" class="grid three stat-strip"></div>
+
+  <p class="fix">
+    <strong>The fix:</strong> never use a bare block cipher. Use an AEAD mode
+    such as AES-GCM, which chains blocks and authenticates the result.
+  </p>
+</section>
+
+<!-- ==================================================== 2. two-time pad === -->
+<section class="panel attack" id="pad">
+  <div class="attack-head">
+    <div>
+      <h2>2 · One keystream, many messages</h2>
+      <p class="mistake">
+        The mistake: reusing a nonce, so two messages are XORed with the same
+        keystream. <span class="term">AES-CTR with a repeated nonce</span>
+      </p>
+    </div>
+    <div class="tags">
+      <span class="tag bad">plaintext recovery</span>
+      <span class="tag">difficulty: statistics</span>
+    </div>
+  </div>
+
+  <p class="muted">
+    A stream cipher turns the key and nonce into a keystream and XORs it with
+    the message. Use the same nonce twice and the keystream cancels:
+    <code class="inline">c1 XOR c2 = m1 XOR m2</code>. The key never enters the
+    attack at all.
+  </p>
+
+  <div class="grid two">
+    <div>
+      <h3>Drag a guess along the XOR</h3>
+      <p class="faint">
+        If you can guess a fragment of one message, XOR it into
+        <code class="inline">c1 XOR c2</code> and the other message falls out at
+        that offset. Type a guess and drag the slider.
+      </p>
+      <label for="crib-input">Your guess at some text in message one</label>
+      <input type="text" id="crib-input" value="the meeting is at">
+      <label for="crib-offset" class="offset-label">
+        Offset <span id="crib-offset-value" class="mono">0</span>
+      </label>
+      <input type="range" id="crib-offset" min="0" max="40" value="0">
+      <div class="crib-readout">
+        <div class="crib-line">
+          <span class="crib-tag">m1</span>
+          <pre id="crib-m1"></pre>
+        </div>
+        <div class="crib-line">
+          <span class="crib-tag">m2</span>
+          <pre id="crib-m2"></pre>
+        </div>
+      </div>
+      <p id="crib-verdict" class="faint"></p>
+      <button id="crib-best" type="button">Find the best offset for me</button>
+    </div>
+
+    <div>
+      <h3>Let the statistics do it</h3>
+      <p class="faint">
+        With several messages under one nonce, every keystream byte is
+        constrained by a character in each message at once, and the right value
+        stands out. Below, the same eight messages are encrypted with one
+        repeated nonce and recovered from ciphertext alone.
+      </p>
+      <div class="row">
+        <label for="pad-count" class="inline-label">Messages intercepted</label>
+        <input type="range" id="pad-count" min="2" max="8" value="8">
+        <span id="pad-count-value" class="mono">8</span>
+      </div>
+      <div class="row">
+        <button id="pad-run" class="primary" type="button">Recover the messages</button>
+        <span id="pad-status" class="faint" role="status"></span>
+      </div>
+      <div class="progress" id="pad-progress" hidden><div class="bar"></div></div>
+      <div id="pad-output" class="recovered"></div>
+      <div id="pad-accuracy" class="grid two stat-strip"></div>
+    </div>
+  </div>
+
+  <p class="fix">
+    <strong>The fix:</strong> never reuse a nonce with a given key. Use a
+    random 96-bit nonce or a strict counter, and prefer an AEAD that fails
+    loudly when you repeat one.
+  </p>
+</section>
+
+<!-- ==================================================== 3. padding oracle = -->
+<section class="panel attack" id="oracle">
+  <div class="attack-head">
+    <div>
+      <h2>3 · A server that only says "bad padding"</h2>
+      <p class="mistake">
+        The mistake: decrypting unauthenticated CBC and reporting why it
+        failed. <span class="term">CBC without a MAC</span>
+      </p>
+    </div>
+    <div class="tags">
+      <span class="tag bad">full decryption</span>
+      <span class="tag">difficulty: patience</span>
+    </div>
+  </div>
+
+  <p class="muted">
+    The server below holds the key and will not decrypt anything for you. It
+    answers exactly one question about any ciphertext you send: was the padding
+    well formed. That single bit, asked a few thousand times, is enough to
+    recover every byte.
+  </p>
+
+  <div class="grid side">
+    <div>
+      <label for="oracle-secret">The server's secret message</label>
+      <textarea id="oracle-secret" rows="3">transfer 5000 EUR to account DK95 2000 0012 3456 78</textarea>
+      <div class="row">
+        <button id="oracle-run" class="primary" type="button">Run the attack</button>
+        <button id="oracle-stop" type="button" disabled>Stop</button>
+      </div>
+      <p class="faint">
+        Each cell below is one guess for the current byte. Green means the
+        server accepted the padding, which pins that byte.
+      </p>
+      <div id="oracle-grid" class="guess-grid" aria-hidden="true"></div>
+      <div id="oracle-stats" class="stat-strip"></div>
+    </div>
+
+    <div>
+      <h3>Recovered plaintext</h3>
+      <p class="faint">
+        Bytes fill in right to left within each block, because PKCS#7 padding
+        is checked from the end.
+      </p>
+      <pre id="oracle-plaintext" class="plaintext-out"></pre>
+      <div id="oracle-blocks" class="block-strip"></div>
+      <p id="oracle-verdict" class="verdict"></p>
+    </div>
+  </div>
+
+  <p class="fix">
+    <strong>The fix:</strong> authenticate the ciphertext. Encrypt-then-MAC, or
+    simply use an AEAD, so a modified ciphertext is rejected before anything
+    looks at the padding.
+  </p>
+</section>
+
+<!-- ==================================================== 4. length extension -->
+<section class="panel attack" id="extend">
+  <div class="attack-head">
+    <div>
+      <h2>4 · Appending to a message you cannot read</h2>
+      <p class="mistake">
+        The mistake: building a MAC as <code class="inline">H(secret || message)</code>.
+        <span class="term">SHA-256, a Merkle-Damgard hash</span>
+      </p>
+    </div>
+    <div class="tags">
+      <span class="tag bad">forgery</span>
+      <span class="tag">difficulty: arithmetic</span>
+    </div>
+  </div>
+
+  <p class="muted">
+    SHA-256 processes a message block by block, and its output <em>is</em> its
+    internal state. Anyone holding a digest can therefore carry on hashing from
+    where it stopped, without knowing what came before. Prefixing a secret
+    protects nothing against appending.
+  </p>
+
+  <div class="grid two">
+    <div>
+      <label for="extend-message">The message the server signed</label>
+      <input type="text" id="extend-message" value="user=guest&amount=10">
+      <label for="extend-suffix">What you want to append</label>
+      <input type="text" id="extend-suffix" value=";admin=true">
+      <label for="extend-secretlen">
+        Guessed secret length <span id="extend-secretlen-value" class="mono">20</span> bytes
+      </label>
+      <input type="range" id="extend-secretlen" min="8" max="40" value="20">
+      <div class="row">
+        <button id="extend-run" class="primary" type="button">Forge the MAC</button>
+        <span id="extend-status" class="faint" role="status"></span>
+      </div>
+      <p class="faint">
+        The secret itself is random and never shown to the attack. Only its
+        length is guessed, and a wrong guess is rejected, so an attacker simply
+        tries every plausible length.
+      </p>
+    </div>
+
+    <div>
+      <h3>What the server receives</h3>
+      <div id="extend-bytes" class="byte-view"></div>
+      <p class="faint">
+        The middle section is the <strong>glue padding</strong>: the bytes
+        SHA-256 would have appended to the original message. The attacker
+        cannot avoid sending them, and a server that parses loosely does not
+        care.
+      </p>
+      <div id="extend-result"></div>
+    </div>
+  </div>
+
+  <p class="fix">
+    <strong>The fix:</strong> use HMAC, which hashes the key on both sides of
+    the message so a digest cannot be resumed. The page verifies its HMAC
+    against WebCrypto in the tests.
+  </p>
+</section>
+
+<!-- ==================================================== 5. timing ========= -->
+<section class="panel attack" id="timing">
+  <div class="attack-head">
+    <div>
+      <h2>5 · Guessing a token by watching the clock</h2>
+      <p class="mistake">
+        The mistake: comparing secrets with a loop that stops at the first
+        wrong byte. <span class="term">non-constant-time comparison</span>
+      </p>
+    </div>
+    <div class="tags">
+      <span class="tag bad">key recovery</span>
+      <span class="tag">difficulty: measurement</span>
+    </div>
+  </div>
+
+  <p class="muted">
+    A comparison that returns as soon as it finds a mismatch takes slightly
+    longer when more of the guess is right. Guess one character at a time,
+    keep the slowest, and the token falls out in a linear number of tries
+    instead of an exponential one.
+  </p>
+
+  <div class="grid side">
+    <div>
+      <div class="row">
+        <label class="switch">
+          <input type="checkbox" id="timing-constant">
+          <span>Use the constant-time comparison</span>
+        </label>
+      </div>
+      <div class="row">
+        <button id="timing-run" class="primary" type="button">Recover the token</button>
+        <button id="timing-stop" type="button" disabled>Stop</button>
+      </div>
+      <div id="timing-stats" class="stat-strip"></div>
+      <p class="faint">
+        Each candidate is timed over many repetitions with
+        <code class="inline">performance.now()</code>, and the comparison itself
+        does inflated per-byte work. Browser clocks are deliberately coarse, so
+        this <strong>amplifies</strong> a real effect rather than inventing one:
+        the same signal exists in a normal comparison, just below the timer's
+        resolution.
+      </p>
+      <p class="faint">
+        The last character is the exception, and the demo does not pretend
+        otherwise. Each byte's work happens before its comparison, so at the
+        final position a right and a wrong guess cost exactly the same and the
+        timing difference is zero. With the other seven known there are only
+        sixteen candidates left, so that one is settled by simply asking the
+        server which token it accepts.
+      </p>
+    </div>
+
+    <div>
+      <h3>Time per candidate character</h3>
+      <p class="faint">
+        The tallest bar is the correct next character. With the constant-time
+        comparison switched on, the bars flatten out and the attack fails.
+      </p>
+      <canvas id="timing-canvas" width="640" height="260"></canvas>
+      <div class="token-readout">
+        <span class="crib-tag">token</span>
+        <pre id="timing-token"></pre>
+      </div>
+      <p id="timing-verdict" class="verdict"></p>
+    </div>
+  </div>
+
+  <p class="fix">
+    <strong>The fix:</strong> compare secrets in constant time, touching every
+    byte regardless of where they differ. Most languages ship one, and it costs
+    nothing.
+  </p>
+</section>
+
+<section class="panel summary">
+  <h2>The five mistakes, and what to do instead</h2>
+  <table>
+    <thead>
+      <tr><th>Mistake</th><th>What it costs you</th><th>The fix</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>Raw block cipher, one block at a time (ECB)</td>
+        <td>Structure of the plaintext stays visible</td>
+        <td>Use an AEAD (AES-GCM)</td>
+      </tr>
+      <tr>
+        <td>The same nonce twice with a stream cipher</td>
+        <td>Both plaintexts, without the key</td>
+        <td>Never reuse a nonce</td>
+      </tr>
+      <tr>
+        <td>Unauthenticated CBC that reports padding errors</td>
+        <td>Complete decryption from one leaked bit</td>
+        <td>Encrypt-then-MAC</td>
+      </tr>
+      <tr>
+        <td><code class="inline">MAC = H(secret || message)</code></td>
+        <td>Anyone can append to a signed message</td>
+        <td>Use HMAC</td>
+      </tr>
+      <tr>
+        <td>Byte-by-byte secret comparison that returns early</td>
+        <td>The secret, one character at a time</td>
+        <td>Use a constant-time compare</td>
+      </tr>
+    </tbody>
+  </table>
+</section>
+
+<footer class="page">
+  Break It Yourself — a portfolio demo. Deliberately weak parameters, built to
+  be broken. See the README for what this is not.
+</footer>
+
+</div>
+<script type="module" src="app.js"></script>
+</body>
+</html>

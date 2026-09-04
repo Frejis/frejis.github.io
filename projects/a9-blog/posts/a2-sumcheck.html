@@ -1,0 +1,152 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sumcheck — convincing someone of a sum they never add up</title>
+<link rel="stylesheet" href="../../shared/theme.css">
+<link rel="stylesheet" href="../style.css">
+</head>
+<body>
+<div class="wrap">
+
+<nav class="post-nav">
+  <a href="../index.html">← All eight projects</a>
+  <span class="faint">A2 · Sumcheck Visualizer</span>
+</nav>
+
+<article class="post narrow">
+  <header class="page">
+    <p class="eyebrow">Writeup · A2</p>
+    <h1>Convincing someone of a sum they never add up</h1>
+    <div class="meta">
+      <span>8 minute read</span>
+      <span>sumcheck · GKR · finite fields</span>
+    </div>
+    <p class="lede" style="margin-top:1rem">
+      My master's thesis implemented and benchmarked the GKR protocol. This is
+      its inner loop, isolated and slowed down until you can watch it happen.
+    </p>
+  </header>
+
+  <p><a class="demo" href="../../a2-sumcheck/index.html">Open the demo</a></p>
+
+  <h2><span class="step">1</span>The problem</h2>
+  <p>
+    A thesis line reading "implemented and benchmarked the GKR protocol" tells
+    a reader almost nothing. Verifiable computation is a genuinely strange
+    idea: a party that has done an enormous computation can convince you the
+    answer is right, and checking the argument costs you far less than redoing
+    the work. People either already know this and do not need convincing, or
+    have never met it and cannot be persuaded by a sentence. The claim sounds
+    like it should be impossible.
+  </p>
+  <p>
+    The engine underneath it, sumcheck, is short enough to write on a
+    postcard. What is not obvious from the postcard is why it is sound: why a
+    prover who has lied cannot simply keep lying consistently.
+  </p>
+
+  <h2><span class="step">2</span>What I built</h2>
+  <p>
+    The page runs the protocol as a conversation, one round at a time, with
+    the transcript accumulating as you press through it. A grid on the right is
+    the boolean hypercube the sum is taken over; every round pins one variable
+    to a random field element and the grid halves. Two bars underneath count
+    the field operations each side has actually performed. The prover's bar
+    doubles with each extra variable. The verifier's grows by four operations
+    per round. That widening gap is the entire reason the protocol exists.
+  </p>
+  <p>
+    There is also a cheating prover. Pick a cheat, run the protocol, and watch
+    every round check pass — and then fail at the final oracle query. A
+    soundness experiment repeats that over many trials and reports the measured
+    rejection rate, and a benchmark times verification on your machine rather
+    than quoting mine.
+  </p>
+
+  <h2><span class="step">3</span>How it works</h2>
+  <p>
+    Everything happens in the prime field p = 2<sup>31</sup>−1, with BigInt
+    arithmetic and inverses computed by Fermat's little theorem
+    (a<sup>p−2</sup>). The object being summed is a multilinear extension: a
+    table of 2<sup>v</sup> values at the boolean points, extended to the whole
+    field so that it stays degree one in every variable. The tests check both
+    halves of that: the extension agrees with the table at every boolean point,
+    and it is linear along each axis.
+  </p>
+  <p>
+    The prover claims a value H for the sum over the hypercube. In round i it
+    sends the univariate polynomial s<sub>i</sub>(X) obtained by summing over
+    all remaining variables with variable i left free. Because the polynomial
+    is multilinear, s<sub>i</sub> has degree one, so two evaluations
+    s<sub>i</sub>(0) and s<sub>i</sub>(1) describe it completely. The verifier
+    checks only that s<sub>i</sub>(0) + s<sub>i</sub>(1) equals the claim it is
+    currently holding, picks a random r<sub>i</sub>, and takes
+    s<sub>i</sub>(r<sub>i</sub>) as its new claim. After v rounds every
+    variable is bound, and the verifier makes one query to an oracle for
+    g(r<sub>1</sub>..r<sub>v</sub>) and compares. Four operations a round, one
+    evaluation at the end, against a sum the prover had to walk in full.
+  </p>
+  <p>
+    Soundness rests on the Schwartz-Zippel lemma. If the prover's claim is
+    wrong, then at some round the polynomial it sends must differ from the true
+    one; two distinct polynomials of degree d agree on at most d points, so a
+    uniformly random r<sub>i</sub> catches the discrepancy except with
+    probability d/p, and over v rounds the failure probability is at most
+    d·v/p. The lie is not detected where it was told, it is pushed forward
+    until it collides with the one honest value at the end.
+  </p>
+
+  <h2><span class="step">4</span>What was hard</h2>
+  <p>
+    The mathematics is short, so the work was elsewhere. The hardest part was
+    building a cheating prover worth watching. A naive "corrupt one number in
+    the table" toggle fails the round-one check immediately and teaches
+    nothing, because it makes the protocol look like a checksum. Both cheats
+    here are constructed to pass every individual round check: the lying prover
+    patches s(1) so each round still sums to the previous claim, and the
+    round-corrupter shifts s(0) and s(1) by equal and opposite deltas so their
+    sum is preserved exactly. Neither can be caught by the local check. Both
+    are caught by the final query. That is what soundness actually looks like,
+    and it took some care to construct an adversary that consistent.
+  </p>
+  <p>
+    Two smaller ones. The operation counter is threaded through the field
+    arithmetic itself rather than estimated afterwards, so the bars cannot
+    drift out of agreement with what the code did. And a single verification is
+    far under the resolution of a browser clock, so the benchmark replays 500
+    verifications and divides.
+  </p>
+
+  <h2><span class="step">5</span>What it is not</h2>
+  <ul>
+    <li><strong>Interactive, not non-interactive.</strong> The verifier draws
+      fresh randomness each round. There is no Fiat-Shamir transform, so
+      nothing on the page is a proof you could publish.</li>
+    <li><strong>Not zero-knowledge.</strong> The verifier learns the round
+      polynomials and one evaluation of g. Sumcheck proves correctness, not
+      secrecy.</li>
+    <li><strong>No polynomial commitment.</strong> The final step is modelled
+      as an oracle query. In a real system that is replaced by a commitment
+      scheme, which is usually where most of the cost lives.</li>
+    <li><strong>A small field on purpose.</strong> p = 2<sup>31</sup>−1 keeps
+      the numbers readable and makes the d·v/p bound weak by production
+      standards. Real deployments use 128 bits or more, or repeat over an
+      extension field.</li>
+    <li><strong>One multilinear polynomial, not the layered circuit of full
+      GKR.</strong> This is the inner loop, isolated so it can be watched.</li>
+  </ul>
+
+  <div class="readmore">
+    <a class="demo" href="../../a2-sumcheck/index.html">Open the demo</a>
+    <a class="writeup" href="../../a2-sumcheck/README.md">Read the README</a>
+    <a class="writeup" href="../index.html">Back to all eight projects</a>
+  </div>
+</article>
+
+<footer class="page">Carl-Emil Heiselberg Andersen · Aarhus, Denmark</footer>
+
+</div>
+</body>
+</html>

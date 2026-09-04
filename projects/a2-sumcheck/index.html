@@ -1,0 +1,185 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sumcheck, step by step</title>
+<link rel="stylesheet" href="../shared/theme.css">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="wrap">
+
+<header class="page">
+  <p class="eyebrow">A2 · verifiable computation</p>
+  <h1>Convincing someone of a sum they never add up</h1>
+  <p class="lede">
+    A prover adds together thousands of numbers and states the total. The verifier
+    never sees more than one of them, and still catches a lie with near-certainty.
+    This is the sumcheck protocol, the engine inside GKR and most of today's
+    proof systems. Press <strong>Next step</strong> and watch it run.
+  </p>
+</header>
+
+<!-- ------------------------------------------------ controls -->
+<section>
+  <div class="panel">
+    <div class="controls">
+      <div class="ctl">
+        <label for="v-input">Variables <span class="faint">v</span></label>
+        <div class="row nowrap">
+          <input type="range" id="v-input" min="3" max="12" value="4" step="1">
+          <output class="mono" id="v-out">4</output>
+        </div>
+      </div>
+      <div class="ctl">
+        <label for="preset-input">The function being summed</label>
+        <select id="preset-input"></select>
+      </div>
+      <div class="ctl">
+        <label for="cheat-input">Prover behaviour</label>
+        <select id="cheat-input"></select>
+      </div>
+      <div class="ctl actions">
+        <label>&nbsp;</label>
+        <div class="row nowrap">
+          <button class="primary" id="next-btn">Next step</button>
+          <button id="auto-btn">Auto-play</button>
+          <button id="reset-btn">Reset</button>
+        </div>
+      </div>
+    </div>
+    <p class="faint" id="preset-blurb" style="margin:.75rem 0 0"></p>
+  </div>
+</section>
+
+<!-- ------------------------------------------------ the protocol -->
+<section>
+  <div class="spread">
+    <h2>The protocol, one step at a time</h2>
+    <span class="tag" id="step-tag">step 0</span>
+  </div>
+
+  <div class="grid side">
+    <!-- left: numbers -->
+    <div>
+      <div class="panel">
+        <h3 id="step-title">The claim</h3>
+        <p class="note" id="narration">&nbsp;</p>
+
+        <div class="kv" id="claim-block">
+          <div class="kv-row"><span class="k">Claimed total</span><span class="mono v" id="claimed-sum">-</span></div>
+          <div class="kv-row"><span class="k">True total</span><span class="mono v" id="true-sum">-</span></div>
+          <div class="kv-row"><span class="k">Values in the sum</span><span class="mono v" id="table-size">-</span></div>
+        </div>
+
+        <div id="round-block" hidden>
+          <div class="kv">
+            <div class="kv-row"><span class="k">Round polynomial</span><span class="mono v" id="poly-coeffs">-</span></div>
+            <div class="kv-row"><span class="k">s(0)</span><span class="mono v" id="s0">-</span></div>
+            <div class="kv-row"><span class="k">s(1)</span><span class="mono v" id="s1">-</span></div>
+            <div class="kv-row"><span class="k">Challenge r</span><span class="mono v" id="challenge">-</span></div>
+          </div>
+          <h3 style="margin-top:1rem">The verifier's check</h3>
+          <pre id="check-eq">waiting</pre>
+          <div class="row"><span class="tag" id="verdict">pending</span>
+            <span class="faint" id="verdict-note"></span></div>
+        </div>
+
+        <div id="final-block" hidden>
+          <h3 style="margin-top:1rem">The single oracle query</h3>
+          <pre id="final-eq">waiting</pre>
+          <div class="row"><span class="tag" id="final-verdict">pending</span>
+            <span class="faint" id="final-note"></span></div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <h3>Work done so far</h3>
+        <p class="faint" style="margin:-.25rem 0 .75rem">Field operations. The whole
+          protocol exists to keep the lower bar short.</p>
+        <div class="bar-block">
+          <div class="bar-label"><span>Prover</span><span class="mono" id="prover-ops">0</span></div>
+          <div class="bar"><i id="prover-bar" class="fill prover"></i></div>
+          <div class="bar-label"><span>Verifier</span><span class="mono" id="verifier-ops">0</span></div>
+          <div class="bar"><i id="verifier-bar" class="fill verifier"></i></div>
+        </div>
+        <p class="faint" id="ops-ratio" style="margin:.75rem 0 0"></p>
+      </div>
+    </div>
+
+    <!-- right: the cube -->
+    <div>
+      <div class="panel cube-panel">
+        <div class="spread">
+          <h3 id="cube-title">The hypercube</h3>
+          <span class="faint" id="cube-sub"></span>
+        </div>
+        <div id="cube" class="cube"></div>
+        <div class="row legend">
+          <span><i class="swatch zero"></i>x = 0 half</span>
+          <span><i class="swatch one"></i>x = 1 half</span>
+          <span><i class="swatch fixed"></i>folded, variable fixed to r</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ------------------------------------------------ soundness -->
+<section>
+  <h2>Can a liar get through?</h2>
+  <div class="panel">
+    <p class="muted" style="margin-top:0">
+      A cheating prover survives a round only if the verifier's random challenge
+      happens to land on a root of the difference of two degree-1 polynomials.
+      With v rounds that is at most <code class="inline">d·v / p</code>. Run it and
+      count.
+    </p>
+    <div class="row">
+      <button class="primary" id="experiment-btn">Run 200 cheating provers</button>
+      <span class="faint" id="experiment-status">not run yet</span>
+    </div>
+    <div class="grid three" style="margin-top:1rem">
+      <div class="stat"><span class="value" id="exp-rate">-</span><span class="label">caught</span></div>
+      <div class="stat"><span class="value" id="exp-escaped">-</span><span class="label">got through</span></div>
+      <div class="stat"><span class="value" id="exp-bound">-</span><span class="label">soundness bound d·v/p</span></div>
+    </div>
+    <p class="faint" id="experiment-note" style="margin:.75rem 0 0"></p>
+  </div>
+</section>
+
+<!-- ------------------------------------------------ benchmark -->
+<section>
+  <h2>What it costs, measured here and now</h2>
+  <div class="panel">
+    <p class="muted" style="margin-top:0">
+      Timed in this browser with <code class="inline">performance.now()</code> for
+      v = 4 to 18, log scale. Nothing below is hardcoded.
+    </p>
+    <div class="row">
+      <button class="primary" id="bench-btn">Run the benchmark</button>
+      <span class="faint" id="bench-status">not run yet</span>
+    </div>
+    <p class="note" id="bench-headline" style="margin-top:1rem" hidden></p>
+    <canvas id="bench-chart" width="1100" height="380"></canvas>
+    <table id="bench-table" hidden>
+      <thead><tr>
+        <th>v</th><th class="num">values</th><th class="num">naive sum (ms)</th>
+        <th class="num">prover (ms)</th><th class="num">verifier (ms)</th>
+        <th class="num">prover ops</th><th class="num">verifier ops</th>
+      </tr></thead>
+      <tbody></tbody>
+    </table>
+  </div>
+</section>
+
+<footer class="page">
+  Sumcheck over F<sub>p</sub>, p = 2<sup>31</sup>&minus;1. Interactive, not
+  Fiat-Shamir; not zero-knowledge. See the README for what this is not.
+</footer>
+
+</div>
+<script type="module" src="app.js"></script>
+</body>
+</html>

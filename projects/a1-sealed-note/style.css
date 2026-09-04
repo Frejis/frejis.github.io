@@ -1,0 +1,77 @@
+/* Sealed Note — project-specific styling only. Shared look lives in theme.css. */
+
+.server-hero {
+  border-color: var(--border-strong);
+}
+
+.row-list {
+  display: flex;
+  flex-direction: column;
+  gap: .6rem;
+  max-height: 420px;
+  overflow-y: auto;
+}
+
+.row-card {
+  background: var(--bg-inset);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: .6rem .7rem;
+}
+.row-card .cipher {
+  word-break: break-all;
+  color: var(--alt);
+  cursor: pointer;
+}
+.row-card .cipher.expanded { color: var(--alt); }
+.row-card .meta {
+  display: flex;
+  gap: .6rem;
+  flex-wrap: wrap;
+  margin-top: .4rem;
+  font-size: .72rem;
+}
+.row-card .actions {
+  margin-top: .5rem;
+  display: flex;
+  gap: .4rem;
+}
+.row-card .actions button { font-size: .78rem; padding: .3rem .6rem; }
+
+.empty-hint {
+  color: var(--text-faint);
+  font-size: .85rem;
+  padding: .5rem 0;
+}
+
+.link-box {
+  display: flex;
+  gap: .5rem;
+  align-items: stretch;
+}
+.link-box input { font-family: var(--mono); font-size: .8rem; }
+
+.result-box {
+  min-height: 3.5rem;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.result-box.error { color: var(--bad); border-left: 3px solid var(--bad); padding-left: .7rem; }
+.result-box.ok { color: var(--good); }
+
+.bench-table td, .bench-table th { font-size: .8rem; }
+
+.fragment-callout {
+  font-family: var(--mono);
+  font-size: .78rem;
+}
+
+.flash { animation: flash-bg .6s ease; }
+@keyframes flash-bg {
+  from { background: var(--accent-dim); }
+  to { background: var(--bg-inset); }
+}
+
+@media (max-width: 900px) {
+  .link-box { flex-direction: column; }
+}

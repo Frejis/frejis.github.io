@@ -1,0 +1,171 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Break It Yourself — five cryptography mistakes, attacked live</title>
+<link rel="stylesheet" href="../../shared/theme.css">
+<link rel="stylesheet" href="../style.css">
+</head>
+<body>
+<div class="wrap">
+
+<nav class="post-nav">
+  <a href="../index.html">← All eight projects</a>
+  <span class="faint">A6 · Break It Yourself</span>
+</nav>
+
+<article class="post narrow">
+  <header class="page">
+    <p class="eyebrow">Writeup · A6</p>
+    <h1>Five cryptography mistakes, attacked live</h1>
+    <div class="meta">
+      <span>8 minute read</span>
+      <span>padding oracle · nonce reuse · length extension · timing</span>
+    </div>
+    <p class="lede" style="margin-top:1rem">
+      Good primitives, used badly. Each mistake on this page comes with the
+      attack that follows from it, running in your browser against code that
+      the tests also run against.
+    </p>
+  </header>
+
+  <p><a class="demo" href="../../a6-break-it/index.html">Open the demo</a></p>
+
+  <h2><span class="step">1</span>The problem</h2>
+  <p>
+    Almost nothing is broken because AES was broken. Things are broken because
+    AES was used in the wrong mode, or a nonce was repeated, or an error
+    message was too informative, or a comparison returned early. These are the
+    failures that actually appear in production systems, and they are invisible
+    from the outside: the code looks fine, the primitives are the right ones,
+    and the tests pass.
+  </p>
+  <p>
+    Reading about them does not build the instinct. "Never reuse a nonce" is a
+    rule you can memorise without believing, and a rule you do not believe is a
+    rule you will break under deadline pressure. The instinct comes from having
+    watched the message fall out of the ciphertext.
+  </p>
+
+  <h2><span class="step">2</span>What I built</h2>
+  <p>
+    Five attacks, each on its own panel with the mistake stated plainly at the
+    top, the attack running below it, and the fix underneath. Nothing is
+    staged: the AES and SHA-256 implementations are in the page and the results
+    are computed while you watch.
+  </p>
+  <ul>
+    <li><strong>The ECB penguin.</strong> An image is drawn on a canvas, then
+      genuinely AES-encrypted in ECB mode. You can still see the picture. The
+      same image in CBC mode is noise.</li>
+    <li><strong>Nonce reuse.</strong> Several messages encrypted under one
+      repeated AES-CTR nonce, recovered from ciphertext alone. Drag a guessed
+      fragment along the XOR of two ciphertexts and watch the other message
+      appear, or let the statistical attack do all eight at once.</li>
+    <li><strong>A padding oracle.</strong> A server that holds the key, refuses
+      to decrypt anything for you, and answers exactly one question: was the
+      padding well formed. Press the button and watch it give up every
+      byte.</li>
+    <li><strong>Length extension.</strong> Forge a valid MAC for a message you
+      extend, without ever learning the secret.</li>
+    <li><strong>A timing side channel.</strong> Recover a token one character
+      at a time from how long a comparison takes, with a bar chart of the
+      per-candidate timings, and a switch that turns on the constant-time
+      comparison so you can watch the attack die.</li>
+  </ul>
+
+  <h2><span class="step">3</span>How it works</h2>
+  <p>
+    ECB leaks structure because a block cipher is a deterministic function on
+    16-byte blocks: identical plaintext blocks map to identical ciphertext
+    blocks, so a flat background stays a flat region after encryption. Chaining
+    in CBC destroys that by XORing each block with the previous ciphertext
+    block first.
+  </p>
+  <p>
+    Nonce reuse turns a stream cipher into a two-time pad. CTR mode derives a
+    keystream from key and nonce and XORs it with the message, so two messages
+    under the same nonce satisfy c₁ ⊕ c₂ = m₁ ⊕ m₂ and the key never enters the
+    attack at all. With a crib, XOR the guess in at some offset and the other
+    plaintext falls out there. With many messages, every keystream byte is
+    constrained simultaneously by one character in each message, and the
+    recovery becomes a scoring problem over English letter statistics, refined
+    by local search.
+  </p>
+  <p>
+    The padding oracle is the classic CBC attack. In CBC, plaintext block
+    P<sub>i</sub> = D(C<sub>i</sub>) ⊕ C<sub>i−1</sub>, and the attacker
+    controls C<sub>i−1</sub> entirely. Send a forged previous block and vary
+    its last byte until the oracle stops complaining: valid padding then almost
+    always means the final plaintext byte is 0x01, which pins
+    D(C<sub>i</sub>) in that position, and from there the real plaintext byte
+    follows by XOR with the genuine C<sub>i−1</sub>. Move to 0x02 0x02, and so
+    on, right to left through the block. One bit of information per query,
+    every byte in a few hundred queries per block.
+  </p>
+  <p>
+    Length extension exploits the fact that a SHA-256 digest <em>is</em> the
+    compression function's internal state after the final block. A MAC built as
+    H(secret ‖ message) can therefore be resumed: initialise the state from the
+    digest, account for the bytes already consumed, and hash a suffix. The
+    attacker must also send the glue padding SHA-256 would have appended to the
+    original message, and must guess the secret's length, but the secret itself
+    is never needed. HMAC is the fix, because hashing the key on both sides
+    means the published digest is not a resumable state.
+  </p>
+  <p>
+    The timing attack measures a comparison that returns at the first
+    mismatching byte, so a guess with more correct prefix takes marginally
+    longer. Guess character by character, keep the slowest, and key recovery is
+    linear rather than exponential.
+  </p>
+
+  <h2><span class="step">4</span>What was hard</h2>
+  <p>
+    The timing channel, by a distance. Browser clocks are deliberately coarse
+    precisely to make this kind of measurement unreliable, so a faithful
+    reproduction of the attack against a normal comparison simply produces
+    noise and teaches the reader the opposite of the truth. The resolution is
+    to amplify rather than fake: the comparison does inflated per-byte work,
+    and each candidate is timed over many repetitions with
+    <code class="inline">performance.now()</code>. The signal being amplified is
+    real and exists in the ordinary comparison too, just under the timer's
+    resolution — and the page says exactly that rather than letting the reader
+    conclude that a browser can reliably time a single byte comparison.
+  </p>
+  <p>
+    Recovering many messages from a repeated nonce was the other one. A greedy
+    per-byte pick on English frequencies gets most of the text and then
+    plateaus with a scattering of wrong bytes, because the scoring function is
+    local. Adding word-level scoring and a refinement pass over the keystream
+    turns a mostly-readable result into a readable one, and the page reports its
+    measured accuracy rather than claiming perfection.
+  </p>
+
+  <h2><span class="step">5</span>What it is not</h2>
+  <ul>
+    <li><strong>Not a cryptography library.</strong> The AES and SHA-256 here
+      exist so the attacks can reach inside them. They are not constant-time
+      and must not be used for anything real.</li>
+    <li><strong>The targets are constructed.</strong> Message lengths, alphabets
+      and oracle behaviour are chosen so each attack finishes while you watch,
+      rather than over hours against a network service.</li>
+    <li><strong>The timing attack is amplified,</strong> as described above. It
+      demonstrates a real channel under favourable conditions, not that any
+      given production endpoint is exploitable from a browser tab.</li>
+    <li><strong>Five mistakes is not the list.</strong> These are five instructive
+      ones, not a survey of applied cryptography failure.</li>
+  </ul>
+
+  <div class="readmore">
+    <a class="demo" href="../../a6-break-it/index.html">Open the demo</a>
+    <a class="writeup" href="../index.html">Back to all eight projects</a>
+  </div>
+</article>
+
+<footer class="page">Carl-Emil Heiselberg Andersen · Aarhus, Denmark</footer>
+
+</div>
+</body>
+</html>

@@ -1,0 +1,194 @@
+/* Privacy Budget — project-specific styling only. Shared look lives in theme.css. */
+
+/* `hidden` must win over the display set by .grid and friends. */
+[hidden] { display: none !important; }
+
+.term {
+  display: block;
+  font-family: var(--mono);
+  font-size: .78rem;
+  color: var(--text-faint);
+}
+
+/* ---------- the budget meter, the visual hero ---------- */
+
+/* Not sticky: the panel is ~360px tall with the ledger in it, and pinning
+   that to the top covers the charts further down the page. */
+.budget-hero {
+  border-color: var(--border-strong);
+}
+
+.meter {
+  position: relative;
+  height: 46px;
+  margin: .9rem 0;
+  background: var(--bg-inset);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+}
+.meter-fill {
+  height: 100%;
+  width: 100%;
+  background: linear-gradient(90deg, var(--accent-dim), var(--accent));
+  transition: width .45s cubic-bezier(.2, .7, .3, 1), background .45s;
+}
+.meter.low .meter-fill { background: linear-gradient(90deg, #4a3a08, var(--warn)); }
+.meter.empty .meter-fill { background: linear-gradient(90deg, #4a1512, var(--bad)); }
+.meter-text {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: .9rem;
+  font-weight: 600;
+  letter-spacing: .01em;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, .8);
+}
+
+.budget-stats { margin-bottom: 1rem; }
+
+.ledger td.num, .ledger th.num { white-space: nowrap; }
+.ledger tr.refused td { color: var(--bad); }
+.ledger tr.fresh { animation: ledger-in .5s ease; }
+@keyframes ledger-in {
+  from { background: var(--accent-dim); }
+  to { background: transparent; }
+}
+
+/* ---------- answers ---------- */
+
+.answer-pair {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+  margin: .3rem 0 1rem;
+}
+.answer {
+  display: flex;
+  flex-direction: column;
+  gap: .3rem;
+  padding: .8rem .9rem;
+  border-radius: var(--radius-sm);
+  background: var(--bg-inset);
+  border: 1px solid var(--border);
+}
+.answer .label {
+  font-size: .75rem;
+  text-transform: uppercase;
+  letter-spacing: .05em;
+  color: var(--text-dim);
+  margin: 0;
+}
+.answer .value {
+  font-size: 1.7rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+}
+.answer.true-answer { border-style: dashed; }
+.answer.true-answer .value { color: var(--text-dim); }
+.answer.noisy-answer { border-color: var(--accent); }
+.answer.noisy-answer .value { color: var(--accent); }
+.answer.refused { border-color: var(--bad); }
+.answer.refused .value { color: var(--bad); font-size: 1.1rem; }
+
+.working { margin-top: .4rem; font-size: .82rem; }
+.working td { color: var(--text-dim); }
+.working td:last-child { text-align: right; font-family: var(--mono); color: var(--text); }
+
+.scale-ends {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  font-size: .72rem;
+}
+
+/* ---------- epsilon explorer ---------- */
+
+.explorer {
+  display: grid;
+  grid-template-columns: 300px 1fr;
+  gap: 1.25rem;
+  align-items: start;
+}
+.explorer canvas { width: 100%; }
+.explorer-stats { margin: 1rem 0 .6rem; }
+.explorer-stats .value { font-size: 1.15rem; }
+
+/* ---------- attack ---------- */
+
+.attack-panel.exposed { border-color: var(--bad); }
+
+.switch {
+  display: flex;
+  align-items: center;
+  gap: .5rem;
+  margin: 0;
+  font-size: .85rem;
+  color: var(--text);
+  cursor: pointer;
+}
+.switch input { width: auto; accent-color: var(--good); }
+.switch.off { color: var(--bad); }
+.switch.off input { accent-color: var(--bad); }
+
+.attack-result {
+  margin-top: 1rem;
+  padding: 1rem 1.1rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-strong);
+  background: var(--bg-inset);
+}
+.attack-result.breach {
+  border-color: var(--bad);
+  background: #2a1010;
+  animation: breach-in .5s ease;
+}
+@keyframes breach-in {
+  from { transform: translateY(-4px); opacity: .3; }
+  to { transform: none; opacity: 1; }
+}
+.attack-result .verdict {
+  font-size: 1.15rem;
+  font-weight: 600;
+  line-height: 1.35;
+  margin: 0 0 .5rem;
+}
+.attack-result.breach .verdict { color: var(--bad); }
+.attack-result.defended .verdict { color: var(--good); }
+.attack-result .arith {
+  font-family: var(--mono);
+  font-size: .85rem;
+  color: var(--text-dim);
+  white-space: pre-wrap;
+}
+.attack-result .subject {
+  font-family: var(--mono);
+  color: var(--text);
+}
+
+.attack-table td, .attack-table th { font-size: .82rem; }
+.attack-table tr.breach td.num { color: var(--bad); }
+.attack-table tr.safe td.num { color: var(--good); }
+
+canvas { width: 100%; }
+
+@media (max-width: 900px) {
+  .budget-hero { position: static; }
+  .answer-pair, .explorer { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 620px) {
+  /* Five columns of numbers do not fit a phone. Let each table scroll on its
+     own rather than pushing the whole page sideways. */
+  table {
+    display: block;
+    overflow-x: auto;
+    white-space: nowrap;
+  }
+  .meter { height: 40px; }
+  .meter-text { font-size: .8rem; }
+  .answer .value { font-size: 1.35rem; }
+}

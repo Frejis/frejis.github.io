@@ -1,0 +1,59 @@
+/* a4-shrink-lab: only what the theme does not already cover. */
+
+.controls {
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr auto;
+  gap: 1rem;
+  align-items: end;
+}
+.controls .row.nowrap { flex-wrap: nowrap; }
+.controls .actions button { white-space: nowrap; }
+
+/* ---------- run strip ---------- */
+
+.run-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 3px;
+  min-height: 22px;
+}
+.dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 2px;
+  display: inline-block;
+}
+.dot.pass { background: var(--good); }
+.dot.fail { background: var(--bad); }
+
+/* ---------- counterexample ---------- */
+
+.stat-block pre {
+  font-size: 1.05rem;
+  min-height: 2.6rem;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.stat-block h3 { color: var(--text-dim); }
+
+/* ---------- shrink chart / table ---------- */
+
+#shrink-chart, #dist-chart, #bench-chart {
+  width: 100%;
+  height: auto;
+  margin-top: .5rem;
+  background: var(--bg-inset);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+}
+
+.table-scroll { max-height: 340px; overflow-y: auto; margin-top: 1rem; }
+.candidate-cell { max-width: 480px; overflow-x: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#shrink-table tr.accepted { background: color-mix(in srgb, var(--good) 8%, transparent); }
+#shrink-table tr.rejected { opacity: .55; }
+#shrink-table thead th { position: sticky; top: 0; background: var(--bg-raised); }
+
+@media (max-width: 900px) {
+  .controls { grid-template-columns: 1fr; }
+  .grid.two { grid-template-columns: 1fr; }
+}

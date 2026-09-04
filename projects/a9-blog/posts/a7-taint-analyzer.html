@@ -1,0 +1,161 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Taint Analyzer — dataflow analysis you can watch converge</title>
+<link rel="stylesheet" href="../../shared/theme.css">
+<link rel="stylesheet" href="../style.css">
+</head>
+<body>
+<div class="wrap">
+
+<nav class="post-nav">
+  <a href="../index.html">← All eight projects</a>
+  <span class="faint">A7 · Taint Analyzer</span>
+</nav>
+
+<article class="post narrow">
+  <header class="page">
+    <p class="eyebrow">Writeup · A7</p>
+    <h1>Dataflow analysis you can watch converge</h1>
+    <div class="meta">
+      <span>8 minute read</span>
+      <span>CFG · worklist algorithm · fixed point</span>
+    </div>
+    <p class="lede" style="margin-top:1rem">
+      "Prove this bug exists" turns out to be a fixed-point computation over a
+      graph, and that computation stops being mysterious once you can watch it
+      run.
+    </p>
+  </header>
+
+  <p><a class="demo" href="../../a7-taint-analyzer/index.html">Open the demo</a></p>
+
+  <h2><span class="step">1</span>The problem</h2>
+  <p>
+    Static analysis tools arrive in a developer's life as a list of warnings
+    from a black box. Some are right, some are not, and there is rarely any way
+    to see why the tool believes what it believes. That produces two bad
+    outcomes: the tool is either trusted blindly or ignored entirely.
+  </p>
+  <p>
+    The underlying theory is not obscure. It is a lattice, a transfer function
+    and a fixed point, and it fits on a whiteboard. But the gap between the
+    whiteboard and a tool that flags a real SQL injection is exactly what a CV
+    line cannot convey, and the iteration itself is invisible even to people
+    who write these analyses professionally.
+  </p>
+
+  <h2><span class="step">2</span>What I built</h2>
+  <p>
+    Paste a snippet of a small JS-like language into the left pane. The tool
+    tokenizes and parses it, builds a control-flow graph, and runs a dataflow
+    analysis that tracks which variables are tainted — derived from untrusted
+    input such as <code class="inline">request.query</code> — as they flow
+    through assignments, string concatenation, branches and loops. If tainted
+    data reaches a sink such as <code class="inline">db.query</code>,
+    <code class="inline">eval</code> or an
+    <code class="inline">innerHTML</code> assignment without passing through a
+    sanitizer, it is reported with the full chain of statements the taint
+    travelled along.
+  </p>
+  <p>
+    Below that is the part worth the visit: a stepper over the worklist
+    algorithm. Press through it and you see each block visit, the state before
+    and after, and the successors being re-queued, until nothing changes and
+    the queue empties. Several examples are preloaded, including one built
+    specifically as a false-positive trap.
+  </p>
+
+  <h2><span class="step">3</span>How it works</h2>
+  <p>
+    Taint tracking is a forward "may" analysis over the two-point lattice
+    untainted ⊑ tainted, lifted pointwise to a set of variables. Each basic
+    block has a transfer function: an assignment adds the target to the tainted
+    set if any operand is tainted or is a source, removes it if the right-hand
+    side is a call to a sanitizer, and otherwise leaves it alone. The join at a
+    merge point is set union.
+  </p>
+  <p>
+    That choice of join is the whole precision story. Because it is union, a
+    variable tainted along <em>either</em> incoming path is tainted after the
+    merge. This is what makes "sanitized on only one branch" get flagged, and
+    "sanitized identically on every branch" not get flagged. Both cases are in
+    the test suite, and the second one is the false-positive trap: an analysis
+    with a sloppy join still reports it, and this one is tested not to.
+  </p>
+  <p>
+    The solver is the standard worklist. Seed the queue with all blocks;
+    repeatedly take a block, recompute its IN as the join of its predecessors'
+    OUTs, apply the transfer function to get a new OUT, and if the OUT changed,
+    re-queue the successors. Loops are what make this interesting: a loop
+    back-edge feeds a block's own output back into its input, so a single pass
+    is not enough and the algorithm has to iterate until nothing changes. Since
+    the transfer functions are monotone over a finite lattice, that termination
+    is guaranteed rather than hoped for, and monotonicity is asserted in the
+    tests. The stepper exposes every one of those visits.
+  </p>
+  <p>
+    To show the framework is generic rather than taint-specific dressing, a
+    second and entirely different analysis — reaching definitions — runs over
+    the same CFG through the same worklist code path.
+  </p>
+
+  <h2><span class="step">4</span>What was hard</h2>
+  <p>
+    Deciding where to sit on the soundness-precision axis, and then being
+    honest about the consequences. The analysis is built sound-leaning: it is
+    designed never to silently drop a taint flow it can see, at the cost of
+    occasional false alarms. That decision propagates everywhere. Assigning
+    into a member expression taints the whole base object
+    (<code class="inline">user.name = tainted</code> marks
+    <code class="inline">user</code>), which is coarse and can produce false
+    positives, but never a missed flow. A branch that can never actually be
+    taken at runtime still contributes its taint at the merge, because the
+    analysis cannot evaluate the condition.
+  </p>
+  <p>
+    The other real difficulty was the layout of the CFG. A graph drawing that
+    crosses its own edges makes the animation useless, so block placement is
+    computed rather than hand-arranged, and the witness path is highlighted
+    through the graph and the source at the same time so the reader can match
+    one to the other.
+  </p>
+
+  <h2><span class="step">5</span>What it is not</h2>
+  <ul>
+    <li><strong>Not a production SAST tool.</strong> No type system, no
+      inter-file analysis, no configuration beyond editing
+      <code class="inline">analysis.js</code>.</li>
+    <li><strong>No aliasing.</strong> Two variables referring to "the same"
+      object are tracked independently; <code class="inline">let a = b; b =
+      tainted;</code> does not retroactively taint
+      <code class="inline">a</code>.</li>
+    <li><strong>No field sensitivity.</strong> Taint is tracked per base object,
+      not per property.</li>
+    <li><strong>Intraprocedural in spirit.</strong> One top-level function, no
+      call graph; taint through a call is decided by whether its arguments are
+      tainted, with curated source, sink and sanitizer name lists standing in
+      for real interprocedural summaries.</li>
+    <li><strong>String matching for sources, sinks and sanitizers.</strong> This
+      is how essentially every real taint tool works, but it means renaming
+      <code class="inline">escape</code> to <code class="inline">esc</code>
+      silently breaks sanitizer detection.</li>
+    <li><strong>A teaching-sized language.</strong> No arrays, objects, template
+      literals, <code class="inline">for</code> loops or arrow functions — the
+      subset in <code class="inline">parse.js</code>, not JavaScript.</li>
+  </ul>
+
+  <div class="readmore">
+    <a class="demo" href="../../a7-taint-analyzer/index.html">Open the demo</a>
+    <a class="writeup" href="../../a7-taint-analyzer/README.md">Read the README</a>
+    <a class="writeup" href="../index.html">Back to all eight projects</a>
+  </div>
+</article>
+
+<footer class="page">Carl-Emil Heiselberg Andersen · Aarhus, Denmark</footer>
+
+</div>
+</body>
+</html>

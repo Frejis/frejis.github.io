@@ -1,0 +1,158 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Shrink Lab — property-based testing, watched</title>
+<link rel="stylesheet" href="../shared/theme.css">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="wrap">
+
+<header class="page">
+  <p class="eyebrow">A4 · property-based testing</p>
+  <h1>The part of a fuzzer nobody shows you</h1>
+  <p class="lede">
+    Feed a function thousands of random inputs and one of them breaks it. That
+    counterexample is usually huge and unreadable. A property-based tester's
+    real trick is <strong>shrinking</strong>: automatically simplifying the
+    failure until nothing more can be removed without the bug disappearing.
+    This page is a miniature QuickCheck built from scratch, and it shows you
+    that process happening.
+  </p>
+</header>
+
+<!-- ------------------------------------------------ controls -->
+<section>
+  <div class="panel">
+    <div class="controls">
+      <div class="ctl">
+        <label for="subject-select">Function under test</label>
+        <select id="subject-select"></select>
+      </div>
+      <div class="ctl">
+        <label for="runs-input">Random runs</label>
+        <input type="number" id="runs-input" min="10" max="5000" step="10" value="200">
+      </div>
+      <div class="ctl">
+        <label for="seed-input">Seed <span class="faint">(reproduces the exact run)</span></label>
+        <input type="number" id="seed-input" min="0" max="4294967295" step="1" value="12345">
+      </div>
+      <div class="ctl actions">
+        <label>&nbsp;</label>
+        <div class="row nowrap">
+          <button class="primary" id="run-btn">Run</button>
+          <button id="rerun-btn">Rerun this seed</button>
+        </div>
+      </div>
+    </div>
+    <p class="faint" id="subject-desc" style="margin:.75rem 0 0"></p>
+  </div>
+</section>
+
+<!-- ------------------------------------------------ run status -->
+<section>
+  <div class="spread">
+    <h2>Runs</h2>
+    <span class="tag" id="run-tag">not run yet</span>
+  </div>
+  <div class="panel">
+    <div class="row" style="margin-bottom:.75rem">
+      <div class="stat"><span class="value" id="pass-count">0</span><span class="label">passed</span></div>
+      <div class="stat"><span class="value" id="fail-count">0</span><span class="label">failed</span></div>
+      <div class="stat"><span class="value" id="seed-echo">-</span><span class="label">seed</span></div>
+    </div>
+    <div id="run-strip" class="run-strip"></div>
+    <p class="faint" id="run-note" style="margin:.75rem 0 0">Press Run to generate random inputs and check the property against them.</p>
+  </div>
+</section>
+
+<!-- ------------------------------------------------ counterexample -->
+<section id="result-section" hidden>
+  <h2>Counterexample found</h2>
+  <div class="panel">
+    <div class="grid two">
+      <div class="stat-block">
+        <h3>Original</h3>
+        <pre id="original-value">-</pre>
+        <p class="faint">size <span id="original-size" class="mono">-</span></p>
+      </div>
+      <div class="stat-block">
+        <h3>Minimal (after shrinking)</h3>
+        <pre id="minimal-value">-</pre>
+        <p class="faint">size <span id="minimal-size" class="mono">-</span></p>
+      </div>
+    </div>
+    <p class="note" id="reduction-note" style="margin-top:1rem">-</p>
+  </div>
+</section>
+
+<!-- ------------------------------------------------ shrink path -->
+<section id="shrink-section" hidden>
+  <div class="spread">
+    <h2>Watching it shrink</h2>
+    <span class="faint" id="shrink-step-count"></span>
+  </div>
+  <div class="panel">
+    <p class="muted" style="margin-top:0">
+      Every row below is a candidate the shrinker actually tried. Red still
+      fails the property, so the shrinker keeps that candidate and tries to
+      simplify further. Green means the candidate now passes, a dead end -
+      the shrinker backs up and tries something else. The chart is the size
+      of the accepted candidate at each step: a descending staircase.
+    </p>
+    <canvas id="shrink-chart" width="1100" height="280"></canvas>
+    <div class="table-scroll">
+      <table id="shrink-table">
+        <thead><tr>
+          <th class="num">step</th><th>candidate</th><th class="num">size</th><th>result</th>
+        </tr></thead>
+        <tbody id="shrink-tbody"></tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<!-- ------------------------------------------------ distribution -->
+<section>
+  <h2>What random testing actually explored</h2>
+  <div class="panel">
+    <p class="muted" style="margin-top:0">
+      A histogram of the size of every generated input from the last run
+      (array length, string length, or magnitude for numbers). If this
+      distribution is lopsided, so is the testing.
+    </p>
+    <canvas id="dist-chart" width="1100" height="220"></canvas>
+    <p class="faint" id="dist-note" style="margin-top:.5rem">Run the test above to populate this.</p>
+  </div>
+</section>
+
+<!-- ------------------------------------------------ benchmark -->
+<section>
+  <h2>How many runs it typically takes to find a bug</h2>
+  <div class="panel">
+    <p class="muted" style="margin-top:0">
+      Runs the current subject from scratch across many different seeds
+      (no shrinking, just looking for the first failure) and histograms how
+      many random inputs it took each time. A wide spread, or a long tail,
+      is a sign the bug is easy to miss with too small a run budget.
+    </p>
+    <div class="row">
+      <button class="primary" id="bench-btn">Run 200 seeds</button>
+      <span class="faint" id="bench-status">not run yet</span>
+    </div>
+    <canvas id="bench-chart" width="1100" height="240" style="margin-top:1rem"></canvas>
+    <p class="faint" id="bench-note" style="margin-top:.5rem"></p>
+  </div>
+</section>
+
+<footer class="page">
+  Shrink Lab. All generators, shrinkers and subjects are plain ES modules with
+  no dependencies; see the README for what this is not.
+</footer>
+
+</div>
+<script type="module" src="app.js"></script>
+</body>
+</html>

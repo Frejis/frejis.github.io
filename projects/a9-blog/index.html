@@ -1,0 +1,256 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Carl-Emil Heiselberg Andersen — eight interactive demos</title>
+<link rel="stylesheet" href="../shared/theme.css">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="wrap">
+
+<header class="page">
+  <p class="eyebrow">Portfolio · cryptography and programming languages</p>
+  <h1>Eight things I built to be poked at</h1>
+  <p class="lede">
+    Cryptography and programming-language work is hard to show on a CV: the
+    interesting part is a protocol or an algorithm, and both are invisible.
+    So each of these eight demos takes one such mechanism and puts it on
+    screen where you can step through it, break it, and watch it react.
+    Everything runs in your browser. No build step, no dependencies, no
+    server, no network calls.
+  </p>
+  <p class="who">
+    <strong>Carl-Emil Heiselberg Andersen</strong> · M.Sc. Computer Science,
+    Aarhus University, specialised in cryptography and programming languages ·
+    master's thesis implemented and benchmarked the GKR protocol · four
+    semesters as a teaching assistant, including Computer Architecture and
+    Cryptology · Danish and English · currently looking for backend,
+    full-stack, data science, consulting or software-test work in Aarhus.
+  </p>
+</header>
+
+<section>
+  <h2>The demos</h2>
+  <div class="cards">
+
+    <article class="panel card">
+      <span class="num">A1</span>
+      <h3>Sealed Note</h3>
+      <p class="pitch">
+        Share a secret through a server that is mathematically incapable of
+        reading it, then look at exactly what that server stored: ciphertext,
+        an IV, a timestamp, and nothing else.
+      </p>
+      <div class="tags">
+        <span class="tag">WebCrypto</span>
+        <span class="tag">AES-GCM</span>
+        <span class="tag">AEAD</span>
+        <span class="tag">URL fragment</span>
+      </div>
+      <div class="actions">
+        <a class="demo" href="../a1-sealed-note/index.html">Open the demo</a>
+        <a class="writeup" href="posts/a1-sealed-note.html">Read the writeup</a>
+      </div>
+    </article>
+
+    <article class="panel card">
+      <span class="num">A2</span>
+      <h3>Sumcheck Visualizer</h3>
+      <p class="pitch">
+        Watch someone be convinced that a sum of 262,144 numbers is right
+        while looking at one of them. This is the inner loop of my thesis
+        protocol, stepped through one round at a time.
+      </p>
+      <div class="tags">
+        <span class="tag">sumcheck</span>
+        <span class="tag">GKR</span>
+        <span class="tag">finite fields</span>
+        <span class="tag">soundness</span>
+      </div>
+      <div class="actions">
+        <a class="demo" href="../a2-sumcheck/index.html">Open the demo</a>
+        <a class="writeup" href="posts/a2-sumcheck.html">Read the writeup</a>
+      </div>
+    </article>
+
+    <article class="panel card">
+      <span class="num">A3</span>
+      <h3>Type Playground</h3>
+      <p class="pitch">
+        A small language where you never write a type and the compiler works
+        all of them out anyway, live as you type, showing the reasoning
+        instead of just the verdict.
+      </p>
+      <div class="tags">
+        <span class="tag">type inference</span>
+        <span class="tag">Hindley-Milner</span>
+        <span class="tag">unification</span>
+        <span class="tag">parsing</span>
+      </div>
+      <div class="actions">
+        <a class="demo" href="../a3-type-playground/index.html">Open the demo</a>
+        <a class="writeup" href="posts/a3-type-playground.html">Read the writeup</a>
+      </div>
+    </article>
+
+    <article class="panel card">
+      <span class="num">A4</span>
+      <h3>Shrink Lab</h3>
+      <p class="pitch">
+        Random testing finds a bug with a 40-element input nobody can read.
+        This one shows the step nobody demonstrates: cutting that input down
+        to the two elements that actually matter.
+      </p>
+      <div class="tags">
+        <span class="tag">property testing</span>
+        <span class="tag">QuickCheck</span>
+        <span class="tag">shrinking</span>
+        <span class="tag">delta debugging</span>
+      </div>
+      <div class="actions">
+        <a class="demo" href="../a4-shrink-lab/index.html">Open the demo</a>
+        <a class="writeup" href="posts/a4-shrink-lab.html">Read the writeup</a>
+      </div>
+    </article>
+
+    <article class="panel card">
+      <span class="num">A5</span>
+      <h3>Secret Ballot</h3>
+      <p class="pitch">
+        A poll that adds up every vote without decrypting a single one. The
+        bulletin board is public, the ballots are real encrypted integers,
+        and only the four totals are ever opened.
+      </p>
+      <div class="tags">
+        <span class="tag">Paillier</span>
+        <span class="tag">homomorphic</span>
+        <span class="tag">BigInt</span>
+        <span class="tag">Miller-Rabin</span>
+      </div>
+      <div class="actions">
+        <a class="demo" href="../a5-secret-ballot/index.html">Open the demo</a>
+        <a class="writeup" href="posts/a5-secret-ballot.html">Read the writeup</a>
+      </div>
+    </article>
+
+    <article class="panel card">
+      <span class="num">A6</span>
+      <h3>Break It Yourself</h3>
+      <p class="pitch">
+        Five ways to use good cryptography badly, each with the attack that
+        follows, running live: the ECB penguin, nonce reuse, a padding
+        oracle, length extension, and a timing leak.
+      </p>
+      <div class="tags">
+        <span class="tag">padding oracle</span>
+        <span class="tag">nonce reuse</span>
+        <span class="tag">length extension</span>
+        <span class="tag">side channel</span>
+      </div>
+      <div class="actions">
+        <a class="demo" href="../a6-break-it/index.html">Open the demo</a>
+        <a class="writeup" href="posts/a6-break-it.html">Read the writeup</a>
+      </div>
+    </article>
+
+    <article class="panel card">
+      <span class="num">A7</span>
+      <h3>Taint Analyzer</h3>
+      <p class="pitch">
+        A static analyzer that proves untrusted input reaches a database
+        query, and shows the exact path it took, with the fixed-point
+        iteration animated one block visit at a time.
+      </p>
+      <div class="tags">
+        <span class="tag">dataflow analysis</span>
+        <span class="tag">CFG</span>
+        <span class="tag">worklist</span>
+        <span class="tag">fixed point</span>
+      </div>
+      <div class="actions">
+        <a class="demo" href="../a7-taint-analyzer/index.html">Open the demo</a>
+        <a class="writeup" href="posts/a7-taint-analyzer.html">Read the writeup</a>
+      </div>
+    </article>
+
+    <article class="panel card">
+      <span class="num">A8</span>
+      <h3>Privacy Budget</h3>
+      <p class="pitch">
+        Ask a health registry real questions and watch a privacy budget drain
+        until it refuses to answer. Turn the guarantee off and one person's
+        diagnosis falls out of two innocent aggregates.
+      </p>
+      <div class="tags">
+        <span class="tag">differential privacy</span>
+        <span class="tag">Laplace</span>
+        <span class="tag">sensitivity</span>
+        <span class="tag">composition</span>
+      </div>
+      <div class="actions">
+        <a class="demo" href="../a8-privacy-budget/index.html">Open the demo</a>
+        <a class="writeup" href="posts/a8-privacy-budget.html">Read the writeup</a>
+      </div>
+    </article>
+
+  </div>
+</section>
+
+<section class="grid two">
+  <div class="panel">
+    <h2>How to run any of this</h2>
+    <p class="muted">
+      There is nothing to install. Clone the repository and double-click any
+      project's <code class="inline">index.html</code>, or serve the repository
+      root with whatever static server is nearest to hand:
+    </p>
+    <pre>python -m http.server 4180
+npx serve .</pre>
+    <p class="muted" style="margin-top:.9rem">
+      Then open <code class="inline">projects/a9-blog/index.html</code> and work
+      from there. The logic in each project lives in DOM-free modules, so the
+      tests run under Node's built-in runner with no test framework:
+    </p>
+    <pre>node --test "projects/&lt;slug&gt;/*.test.js"</pre>
+    <p class="faint" style="margin-top:.6rem">
+      Use the quoted-glob form. Passing a bare directory to
+      <code class="inline">--test</code> is rejected by Node 24 on Windows.
+    </p>
+  </div>
+
+  <div class="panel">
+    <h2>About these projects</h2>
+    <p class="muted">
+      These are demonstrations, not products. Each one exists because some
+      piece of machinery is normally invisible — a protocol transcript, a
+      unification trace, a worklist converging, a privacy budget being spent —
+      and the fastest way to show I understand it is to let you watch it run
+      and interfere with it.
+    </p>
+    <p class="muted">
+      That means they are deliberately small, and honest about it. Every
+      README ends with a <strong>"What this is not"</strong> section listing
+      what a real system would need and this one does not have: no threshold
+      decryption in the ballot box, no polynomial commitment in the sumcheck,
+      no alias analysis in the taint tracker. Overselling a demo is the fastest
+      way to make a reviewer distrust everything else in it.
+    </p>
+    <div class="note">
+      The zero-dependency rule is on purpose. Nothing here can rot because a
+      package was unpublished or a bundler changed its config format, and a
+      reviewer can read the source straight out of the folder without a
+      toolchain. The demos should still open in five years.
+    </div>
+  </div>
+</section>
+
+<footer class="page">
+  Carl-Emil Heiselberg Andersen · Aarhus, Denmark ·
+  <a href="../../index.html">back to the front page</a>
+</footer>
+
+</div>
+</body>
+</html>

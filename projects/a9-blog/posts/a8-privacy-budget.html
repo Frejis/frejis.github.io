@@ -1,0 +1,166 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Privacy Budget — differential privacy you can watch being spent</title>
+<link rel="stylesheet" href="../../shared/theme.css">
+<link rel="stylesheet" href="../style.css">
+</head>
+<body>
+<div class="wrap">
+
+<nav class="post-nav">
+  <a href="../index.html">← All eight projects</a>
+  <span class="faint">A8 · Privacy Budget</span>
+</nav>
+
+<article class="post narrow">
+  <header class="page">
+    <p class="eyebrow">Writeup · A8</p>
+    <h1>Differential privacy you can watch being spent</h1>
+    <div class="meta">
+      <span>8 minute read</span>
+      <span>Laplace mechanism · sensitivity · composition</span>
+    </div>
+    <p class="lede" style="margin-top:1rem">
+      Anonymised data is not anonymous. The interesting question is what a
+      formal guarantee costs you, and this page charges you for it in front of
+      the reader.
+    </p>
+  </header>
+
+  <p><a class="demo" href="../../a8-privacy-budget/index.html">Open the demo</a></p>
+
+  <h2><span class="step">1</span>The problem</h2>
+  <p>
+    "We only publish aggregates" is the standard defence of a data release, and
+    it is not a defence. Two innocuous aggregate answers can differ by exactly
+    one person, and that difference is that person's record. Explaining this in
+    the abstract convinces nobody, because the attack sounds contrived until
+    you see it executed on a database that looks entirely reasonable.
+  </p>
+  <p>
+    Differential privacy is the actual answer, and it is usually presented as a
+    definition with an epsilon in it. What the definition does not convey is
+    that the guarantee is about a whole sequence of questions, not any single
+    one, and that it is therefore a finite resource which can be spent.
+  </p>
+
+  <h2><span class="step">2</span>What I built</h2>
+  <p>
+    A query dashboard over 2,000 synthetic Danes with an age, a region, an
+    income and a chronic diagnosis. Ask aggregate questions — how many people
+    have the diagnosis in Midtjylland, what the average income is in
+    Nordjylland — and get an answer that has been deliberately blurred by a
+    measured amount of noise. The true answer sits next to it, which no real
+    deployment would ever show, because the gap between the two columns is what
+    there is to learn.
+  </p>
+  <p>
+    A budget bar at the top drains with every query. When it is empty the
+    database stops answering, and that refusal is the point of the whole
+    design. There is also a switch that turns the guarantee off, and a
+    differencing attack that then recovers one individual's diagnosis exactly.
+    Turn the noise back on and the same attack degrades to a coin flip. Four
+    charts, all computed live in the page, show the distribution of noisy
+    answers, attack success against epsilon, error against epsilon with the
+    theoretical curve overlaid, and a real analytical finding surviving the
+    noise.
+  </p>
+
+  <h2><span class="step">3</span>How it works</h2>
+  <p>
+    The Laplace mechanism adds noise drawn from Laplace(0, Δ/ε) to a query's
+    true answer, where Δ is the query's sensitivity: the most the answer can
+    change when a single person is added or removed. That single quantity is
+    the whole job, and getting it wrong produces a page that looks identical
+    and guarantees nothing.
+  </p>
+  <ul>
+    <li>A <strong>count</strong> moves by at most 1 when one person joins, so
+      Δ = 1 and noise of scale 1/ε suffices.</li>
+    <li>A <strong>sum</strong> over incomes has no finite sensitivity at all
+      until the range is clamped, because one person with an unbounded income
+      moves it arbitrarily far. The clamp is not tidying; it is what makes the
+      query answerable, and the page says so when it bites.</li>
+    <li>A <strong>mean</strong> is two releases, so it splits its epsilon
+      between a noisy sum and a noisy count.</li>
+    <li>A <strong>histogram</strong> over disjoint regions is charged once, not
+      once per bar, because each person falls in exactly one bin. That is
+      parallel composition, where the cost is the maximum rather than the
+      sum.</li>
+  </ul>
+  <p>
+    Composition is what makes the budget meaningful. Sequential releases add
+    their epsilons; disjoint ones take the maximum. The budget object refuses a
+    query that would overrun the remaining allowance and, importantly, records
+    no spend when it refuses — an off-by-one there would leak the last query
+    for free.
+  </p>
+  <p>
+    The differencing attack is the concrete argument. Find a person uniquely
+    identified by a combination of attributes, ask for the count of the
+    diagnosis over the whole group, ask again over the group minus that
+    person's defining predicate, and subtract. With noise off, the difference
+    is 0 or 1 and is that individual's diagnosis. With noise on, the difference
+    is dominated by two Laplace draws, and the chart of attack success against
+    epsilon collapses onto the 50% line, which is where the attacker has
+    learned nothing.
+  </p>
+
+  <h2><span class="step">4</span>What was hard</h2>
+  <p>
+    Proving the claims rather than asserting them, because everything in this
+    area is statistical and a single run proves nothing in either direction.
+    The tests do the work: the seeded generator is byte-identical across runs,
+    Laplace samples are checked to have mean 0 and variance 2b² over 200,000
+    draws, an outlier's contribution to a clamped sum is shown to stay under
+    the declared sensitivity, sequential composition is checked to sum and
+    parallel composition to max, and the differencing attack is verified in
+    both directions — exact with noise off, and back down to roughly a coin
+    flip at ε = 0.05 over 1,500 seeded trials.
+  </p>
+  <p>
+    The corresponding design decision on the page is that a single attack run
+    is never presented as evidence. The honest claim is about the distribution
+    over many attempts, so the attack panel is backed by a chart of hundreds of
+    runs at each epsilon rather than by one dramatic success.
+  </p>
+
+  <h2><span class="step">5</span>What it is not</h2>
+  <ul>
+    <li><strong>The data is synthetic.</strong> 2,000 fictional records from a
+      fixed seed. The regions are real administrative units; every number
+      attached to them is invented.</li>
+    <li><strong>The trusted-curator problem is not solved.</strong> This is the
+      central model: the code holds raw records in memory and adds noise on
+      output. Who is allowed to hold that data is a harder question than the
+      mathematics here.</li>
+    <li><strong>The Laplace implementation is the naive one.</strong> Inverse
+      transform sampling on 64-bit floats leaks through gaps in the
+      floating-point representation, a known result; production mechanisms use
+      discrete Laplace or snapping variants.</li>
+    <li><strong>Basic composition only.</strong> No advanced composition, no
+      Rényi or zCDP accountant, no amplification by subsampling, so the budget
+      spends faster than a serious deployment would need.</li>
+    <li><strong>The true answer is on screen,</strong> deliberately, and only
+      because this is a teaching tool. Shipping that column would defeat the
+      entire mechanism.</li>
+    <li><strong>The Gaussian mechanism uses the classical (ε, δ) analysis,</strong>
+      valid for ε ≤ 1 and merely conservative above it. The slider goes to
+      5.</li>
+  </ul>
+
+  <div class="readmore">
+    <a class="demo" href="../../a8-privacy-budget/index.html">Open the demo</a>
+    <a class="writeup" href="../../a8-privacy-budget/README.md">Read the README</a>
+    <a class="writeup" href="../index.html">Back to all eight projects</a>
+  </div>
+</article>
+
+<footer class="page">Carl-Emil Heiselberg Andersen · Aarhus, Denmark</footer>
+
+</div>
+</body>
+</html>

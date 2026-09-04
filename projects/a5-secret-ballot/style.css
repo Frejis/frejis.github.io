@@ -1,0 +1,111 @@
+/* Secret Ballot — project-specific styling only. Shared look lives in theme.css. */
+
+.identity-grid {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: .35rem 1rem;
+  font-size: .82rem;
+  background: var(--bg-inset);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: .8rem;
+  word-break: break-all;
+}
+.identity-grid dt { color: var(--text-dim); }
+.identity-grid dd { margin: 0; }
+.identity-grid .highlight { color: var(--good); }
+
+.board-scroll {
+  max-height: 420px;
+  overflow-y: auto;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+}
+.board-scroll table { font-size: .78rem; }
+.board-scroll thead th {
+  position: sticky;
+  top: 0;
+  background: var(--bg-raised);
+  z-index: 1;
+}
+.cipher-cell {
+  font-family: var(--mono);
+  color: var(--alt);
+  cursor: pointer;
+  word-break: break-all;
+  max-width: 14rem;
+}
+.cipher-cell.expanded { max-width: none; }
+.cipher-cell.zero { color: var(--text-faint); }
+.row-corrupted { background: rgba(248, 81, 73, 0.08); }
+
+.same-vote-grid {
+  display: grid;
+  gap: .4rem;
+  font-size: .78rem;
+  background: var(--bg-inset);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: .7rem;
+  margin-top: .6rem;
+  word-break: break-all;
+  min-height: 3rem;
+}
+.same-vote-grid .same { color: var(--good); }
+.same-vote-grid .different { color: var(--bad); }
+
+#attacker-view {
+  min-height: 3rem;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+
+#tally-accumulator {
+  display: flex;
+  flex-direction: column;
+  gap: .6rem;
+  margin-bottom: 1rem;
+}
+.tally-option {
+  background: var(--bg-inset);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: .6rem .8rem;
+}
+.tally-option .label {
+  color: var(--text-dim);
+  font-size: .78rem;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+  margin-bottom: .3rem;
+}
+.tally-option .acc-value {
+  word-break: break-all;
+  font-size: .78rem;
+  color: var(--alt);
+}
+.tally-option .acc-progress {
+  color: var(--text-faint);
+  font-size: .72rem;
+  margin-top: .25rem;
+}
+.tally-option .result {
+  color: var(--good);
+  font-weight: 600;
+}
+.tally-option.done .acc-value { color: var(--good); }
+
+.bench-table td, .bench-table th { font-size: .78rem; }
+
+select {
+  font: inherit;
+  color: var(--text);
+  background: var(--bg-inset);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  padding: .5rem .65rem;
+}
+
+@media (max-width: 900px) {
+  .cipher-cell { max-width: 8rem; }
+}

@@ -1,0 +1,86 @@
+/* Taint Analyzer — project-specific styling only. Shared look lives in theme.css. */
+
+.editor {
+  display: flex;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+}
+.gutter {
+  flex: 0 0 auto;
+  padding: .5rem .5rem .5rem 0;
+  background: var(--bg-inset);
+  border-right: 1px solid var(--border);
+  color: var(--text-faint);
+  font-size: .8rem;
+  line-height: 1.45;
+  text-align: right;
+  overflow: hidden;
+  user-select: none;
+  width: 2.6rem;
+}
+.gutter-line {
+  padding: 0 .4rem;
+  border-left: 3px solid transparent;
+}
+.gutter-line.is-source { color: var(--good); border-left-color: var(--good); }
+.gutter-line.is-sink { color: var(--bad); border-left-color: var(--bad); }
+.gutter-line.is-witness { background: var(--accent-dim); color: var(--accent); }
+
+#code-input {
+  flex: 1 1 auto;
+  border: none;
+  border-radius: 0;
+  line-height: 1.45;
+  min-height: 320px;
+}
+#code-input:focus { outline: none; }
+
+.finding {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: .6rem .7rem;
+  margin-bottom: .6rem;
+  cursor: pointer;
+  background: var(--bg-inset);
+}
+.finding:hover { border-color: var(--accent); }
+.finding.active { border-color: var(--accent); background: var(--accent-dim); }
+.finding .finding-msg { margin: .4rem 0 .2rem; font-size: .88rem; }
+
+#cfg-container {
+  overflow-x: auto;
+  background: var(--bg-inset);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: .5rem;
+}
+#cfg-container svg { display: block; width: 100%; height: auto; }
+
+.cfg-node-box {
+  fill: var(--bg-raised);
+  stroke: var(--border-strong);
+  stroke-width: 1.5px;
+}
+.cfg-node-head { font: 600 11px var(--sans); fill: var(--text-dim); }
+.cfg-node-lines { font: 10px var(--mono); fill: var(--text-faint); }
+.cfg-node-state { font: 10px var(--mono); fill: var(--text-dim); }
+
+.cfg-node.clean .cfg-node-box { stroke: var(--good); }
+.cfg-node.clean .cfg-node-state { fill: var(--good); }
+.cfg-node.tainted .cfg-node-box { stroke: var(--bad); }
+.cfg-node.tainted .cfg-node-state { fill: var(--bad); }
+.cfg-node.on-witness .cfg-node-box { stroke: var(--accent); stroke-width: 2.5px; }
+.cfg-node.rd .cfg-node-box { stroke: var(--alt); }
+
+.cfg-edge.on-witness { filter: drop-shadow(0 0 1px var(--accent)); }
+
+.step-detail label { margin-bottom: .15rem; }
+.step-detail p.mono { margin: 0; font-size: .85rem; }
+
+#example-buttons button { font-size: .85rem; }
+
+@media (max-width: 900px) {
+  .editor { flex-direction: column; }
+  .gutter { width: 100%; display: flex; flex-direction: row; overflow-x: auto; text-align: left; }
+}

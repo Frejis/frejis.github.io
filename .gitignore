@@ -1,0 +1,17 @@
+# This repository is PUBLIC (GitHub Pages free tier requires it).
+# Nothing personal belongs here: the CV, transcripts and cover letters live
+# one directory up, outside this repo. These rules are a second line of
+# defence in case a file is ever copied in by accident.
+
+*.pdf
+*.typ
+cover-letters/
+grades*
+CV*
+PROJECT-PLAN.md
+
+# Scratch and tooling
+scratch/
+node_modules/
+.DS_Store
+Thumbs.db
