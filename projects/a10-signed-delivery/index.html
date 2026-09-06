@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Signed Delivery - digital signatures and trust chains</title>
+<link rel="stylesheet" href="../shared/theme.css">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="wrap">
+
+<header class="page">
+  <p class="eyebrow">Portfolio demo &middot; A10</p>
+  <h1>Signed Delivery</h1>
+  <p class="lede">
+    A signature does not just prove a message wasn't changed - it proves who
+    could have made it. This page signs a real message with a real key, then
+    breaks that guarantee three different ways so you can see exactly what
+    each one relies on.
+  </p>
+</header>
+
+<section class="panel">
+  <h2>Part 1 &middot; sign and verify a message</h2>
+  <p class="muted">
+    The message below is signed with ECDSA (P-256), the same signature
+    scheme behind TLS certificates and most software update systems. Edit
+    it, sign it, then try to break the result.
+  </p>
+
+  <div class="grid two">
+    <div>
+      <label for="message">Message to sign</label>
+      <textarea id="message" rows="3"></textarea>
+      <div class="row" style="margin-top:.6rem">
+        <button id="sign-btn" class="primary">Sign message</button>
+        <button id="reset-part1">Reset to defaults</button>
+      </div>
+    </div>
+    <div>
+      <label>Sender's public key</label>
+      <pre id="public-key-out" class="mono"></pre>
+      <label style="margin-top:.6rem">Signature (hex)</label>
+      <pre id="signature-out" class="mono"></pre>
+    </div>
+  </div>
+
+  <div class="panel" style="margin-top:1rem; background: var(--bg-inset)">
+    <div class="row" style="justify-content: space-between">
+      <div class="row">
+        <span>Verification result:</span>
+        <span id="verify-result"></span>
+      </div>
+      <div class="row">
+        <button id="attack-message" class="danger">Alter the message</button>
+        <button id="attack-signature" class="danger">Alter the signature</button>
+        <button id="attack-key" class="danger">Verify with the wrong sender's key</button>
+      </div>
+    </div>
+    <p id="verify-explain" class="faint" style="margin:.6rem 0 0"></p>
+  </div>
+</section>
+
+<section class="panel">
+  <h2>Part 2 &middot; the trust chain</h2>
+  <p class="muted">
+    One valid signature only proves a document came from whoever holds that
+    key. Trusting a <em>website</em> or a <em>piece of software</em> needs a
+    chain: a root you already trust vouches for an intermediate, which
+    vouches for the thing you actually received. Attack any one link and
+    watch the chain break exactly there - the rest keeps working.
+  </p>
+
+  <div class="grid side">
+    <div id="chain-diagram" class="chain-diagram"></div>
+    <div>
+      <div id="chain-result" class="note" style="margin-bottom:1rem"></div>
+      <div class="row" style="flex-direction:column; align-items:stretch">
+        <button id="break-root" class="danger">Corrupt the root CA's signature</button>
+        <button id="expire-cert" class="danger">Expire the intermediate certificate</button>
+        <button id="untrust-root" class="danger">Remove the root from trusted roots</button>
+        <button id="reset-part2">Reset chain to defaults</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<footer class="page">
+  Simplified certificate model, not X.509 - see <a href="./README.md">README</a>.
+</footer>
+
+</div>
+<script type="module" src="app.js"></script>
+</body>
+</html>

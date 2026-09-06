@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Infrastructure Pivot - shared-artifact clustering demo</title>
+<link rel="stylesheet" href="../shared/theme.css" />
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+<div class="wrap">
+
+<header class="page">
+  <p class="eyebrow">portfolio / infra pivot</p>
+  <h1>Infrastructure Pivot</h1>
+  <p class="lede">
+    Five servers look unrelated - until you notice they share a TLS certificate
+    and an SSH key. This walks through how analysts link infrastructure by
+    pivoting on shared technical fingerprints, and shows why some of those
+    fingerprints are damning while others mean nothing at all.
+  </p>
+</header>
+
+<section class="grid side">
+
+  <div class="col-left">
+
+    <div class="panel">
+      <h2>Selected host</h2>
+      <div id="hostDetail" class="host-detail"></div>
+    </div>
+
+    <div class="panel">
+      <div class="spread">
+        <h2>Pivot from here</h2>
+        <span class="faint">click a shared trait to expand the selection</span>
+      </div>
+      <div id="pivotOptions" class="pivot-options"></div>
+    </div>
+
+  </div>
+
+  <div class="col-right">
+
+    <div class="panel">
+      <div class="spread">
+        <h2>Graph</h2>
+        <div class="row">
+          <span class="tag" id="selectedCount">0 selected</span>
+          <span class="tag" id="totalCount">0 hosts</span>
+        </div>
+      </div>
+      <div class="honest-demo">
+        <p class="faint">
+          Not every shared trait is evidence. Pivot on something almost every
+          host has, and watch the selection fill with noise instead of leads.
+        </p>
+        <button id="weakPivotBtn" class="danger">Pivot on a common trait (watch it flood)</button>
+      </div>
+      <canvas id="graphCanvas" width="820" height="560"></canvas>
+      <p class="faint">
+        Each dot is a host. A line means two hosts share at least one
+        fingerprint below a near-universal threshold. Highlighted nodes are
+        the current selection.
+      </p>
+    </div>
+
+    <div class="panel">
+      <div class="spread">
+        <h2>Pivot trail</h2>
+        <span class="faint">click a step to roll back to it</span>
+        <button id="resetBtn">Reset to start</button>
+      </div>
+      <ol id="pivotTrail" class="pivot-trail"></ol>
+    </div>
+
+  </div>
+
+</section>
+
+<footer class="page">
+  All hosts, IPs, and organisations on this page are synthetic, generated locally
+  from a fixed seed. Nothing here was fetched from a network. See README for details.
+</footer>
+
+</div>
+<script type="module" src="app.js"></script>
+</body>
+</html>

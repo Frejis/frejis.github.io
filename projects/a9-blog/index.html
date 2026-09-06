@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Carl-Emil Heiselberg Andersen — eight interactive demos</title>
+<title>Carl-Emil Heiselberg Andersen — ten interactive demos</title>
 <link rel="stylesheet" href="../shared/theme.css">
 <link rel="stylesheet" href="style.css">
 </head>
@@ -12,11 +12,11 @@
 
 <header class="page">
   <p class="eyebrow">Portfolio · cryptography and programming languages</p>
-  <h1>Eight things I built to be poked at</h1>
+  <h1>Ten things I built to be poked at</h1>
   <p class="lede">
     Cryptography and programming-language work is hard to show on a CV: the
     interesting part is a protocol or an algorithm, and both are invisible.
-    So each of these eight demos takes one such mechanism and puts it on
+    So each of these ten demos takes one such mechanism and puts it on
     screen where you can step through it, break it, and watch it react.
     Everything runs in your browser. No build step, no dependencies, no
     server, no network calls.
@@ -192,6 +192,46 @@
       <div class="actions">
         <a class="demo" href="../a8-privacy-budget/index.html">Open the demo</a>
         <a class="writeup" href="posts/a8-privacy-budget.html">Read the writeup</a>
+      </div>
+    </article>
+
+    <article class="panel card">
+      <span class="num">A10</span>
+      <h3>Signed Delivery</h3>
+      <p class="pitch">
+        Sign a message, then break the trust six ways: edit the text, edit the
+        signature, check it with the wrong key, forge the root, let a
+        certificate expire, or stop trusting the root. Each one fails at a
+        different link, and the rest of the chain still holds.
+      </p>
+      <div class="tags">
+        <span class="tag">ECDSA</span>
+        <span class="tag">WebCrypto</span>
+        <span class="tag">trust chain</span>
+        <span class="tag">certificates</span>
+      </div>
+      <div class="actions">
+        <a class="demo" href="../a10-signed-delivery/index.html">Open the demo</a>
+      </div>
+    </article>
+
+    <article class="panel card">
+      <span class="num">A11</span>
+      <h3>Infrastructure Pivot</h3>
+      <p class="pitch">
+        Ninety servers that look unrelated until you pivot on something they
+        share: a certificate fingerprint, an SSH key, a favicon hash. Every
+        trait is scored for how rare it is, so a strong lead and a coincidence
+        half the internet has are told apart rather than asserted.
+      </p>
+      <div class="tags">
+        <span class="tag">OSINT</span>
+        <span class="tag">pivoting</span>
+        <span class="tag">selectivity</span>
+        <span class="tag">force layout</span>
+      </div>
+      <div class="actions">
+        <a class="demo" href="../a11-infra-pivot/index.html">Open the demo</a>
       </div>
     </article>
 

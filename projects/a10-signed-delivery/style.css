@@ -1,0 +1,39 @@
+/* Project-specific styling only; shared look-and-feel lives in theme.css. */
+
+#signature-out, #public-key-out {
+  word-break: break-all;
+  white-space: pre-wrap;
+  font-size: .78rem;
+  max-height: 6rem;
+  overflow-y: auto;
+}
+
+.chain-diagram {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+}
+
+.chain-arrow {
+  text-align: center;
+  color: var(--text-faint);
+  font-family: var(--mono);
+  font-size: .75rem;
+  padding: .3rem 0;
+}
+
+.cert-box {
+  background: var(--bg-inset);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  padding: .75rem .9rem;
+}
+
+.cert-box.cert-broken {
+  border-color: var(--bad);
+  box-shadow: 0 0 0 1px var(--bad) inset;
+}
+
+@media (max-width: 900px) {
+  .grid.side { grid-template-columns: 1fr; }
+}
