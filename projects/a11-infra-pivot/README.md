@@ -16,7 +16,7 @@ The honest part isn't drawing a graph, it's making "this trait is worthless" vis
 
 Open `index.html` directly in a browser - no server, no build step.
 
-Tests: `node --test "*.test.js"` from this folder (or `node --test "portfolio-staging/a11-infra-pivot/*.test.js"` from the repo root). 15 tests cover deterministic generation, cluster reachability by pivoting, selectivity ranking, the weak-pivot noise flood, and pivot-history rollback.
+Tests: `node --test "*.test.js"` from this folder (or `node --test "projects/a11-infra-pivot/*.test.js"` from the repo root - the quoted glob matters, a bare directory path fails on Node's Windows test runner). The suite covers deterministic generation from a fixed seed, cluster reachability by pivoting including the single-artifact bridge hosts, selectivity scoring and ranking, the weak-pivot noise flood, and pivot-history rollback.
 
 ## What this is not
 

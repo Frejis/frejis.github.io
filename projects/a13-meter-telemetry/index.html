@@ -1,0 +1,200 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Meter Telemetry — bit-packed radio frames for a decade-plus battery</title>
+<link rel="stylesheet" href="../shared/theme.css">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="wrap">
+
+<header class="page">
+  <p class="eyebrow">Portfolio demo · A13</p>
+  <h1>Meter Telemetry</h1>
+  <p class="lede">
+    A bit-packed radio frame for a smart utility meter, in the style of
+    wireless M-Bus: every field laid out by hand at the bit width it actually
+    needs, checked with a CRC, and paid for out of a battery with a design
+    goal of surviving well over a decade in the field on one cell. Each
+    transmission costs battery. Smaller frames mean fewer years spent driving
+    out to replace meters.
+  </p>
+</header>
+
+<!-- ==================================================== 1. byte map ======= -->
+<section class="panel" id="bytemap">
+  <div class="spread">
+    <div>
+      <h2>1 · The frame, bit by bit</h2>
+      <p class="muted">
+        Every field below is packed at exactly the bits it needs — an 11-bit
+        flow rate, a 5-bit battery percentage, single-bit alarm flags — not
+        rounded up to the nearest byte. Change a reading and watch the exact
+        bits change. This is the whole demo in one picture.
+      </p>
+    </div>
+    <span class="tag" id="bytemap-size"></span>
+  </div>
+
+  <div id="byte-map" class="byte-map" role="img" aria-label="Byte map of the encoded frame"></div>
+  <div id="byte-legend" class="legend"></div>
+
+  <div class="grid two controls-grid">
+    <div>
+      <label for="ctl-meterId">Meter ID</label>
+      <input type="range" id="ctl-meterId" min="0" max="999999" value="184213">
+      <p class="faint" id="val-meterId"></p>
+
+      <label for="ctl-volume">Cumulative volume (litres)</label>
+      <input type="range" id="ctl-volume" min="0" max="2000000" value="1284392">
+      <p class="faint" id="val-volume"></p>
+
+      <label for="ctl-flow">Flow rate (litres/hour x10)</label>
+      <input type="range" id="ctl-flow" min="0" max="2047" value="340">
+      <p class="faint" id="val-flow"></p>
+
+      <label for="ctl-battery">Battery</label>
+      <input type="range" id="ctl-battery" min="0" max="31" value="27">
+      <p class="faint" id="val-battery"></p>
+    </div>
+    <div>
+      <p class="faint">Status flags</p>
+      <div class="row flag-row">
+        <label class="switch"><input type="checkbox" id="ctl-leak"><span>leak</span></label>
+        <label class="switch"><input type="checkbox" id="ctl-burst"><span>burst</span></label>
+        <label class="switch"><input type="checkbox" id="ctl-backflow"><span>backflow</span></label>
+        <label class="switch"><input type="checkbox" id="ctl-tamper"><span>tamper</span></label>
+        <label class="switch"><input type="checkbox" id="ctl-lowBattery" checked><span>low battery</span></label>
+      </div>
+      <p class="faint" id="crc-readout"></p>
+      <p class="faint">
+        Timestamp and previous reading advance automatically, ninety seconds
+        apart, so the delta frame below has something real to be smaller than.
+      </p>
+    </div>
+  </div>
+</section>
+
+<!-- ==================================================== 2. full vs delta === -->
+<section class="panel" id="compare">
+  <h2>2 · Full frame vs delta frame</h2>
+  <p class="muted">
+    A full frame states every field from scratch. A delta frame states the
+    change since the previous reading, which is almost always a much smaller
+    number. Both are the same code, run twice, on the reading above.
+  </p>
+  <div class="grid two">
+    <div class="frame-card">
+      <p class="faint">full frame</p>
+      <pre id="full-hex" class="mono frame-hex"></pre>
+      <div class="stat-strip">
+        <div class="stat"><span class="value" id="full-bytes"></span><span class="label">bytes</span></div>
+      </div>
+    </div>
+    <div class="frame-card">
+      <p class="faint">delta frame</p>
+      <pre id="delta-hex" class="mono frame-hex"></pre>
+      <p id="delta-overflow" class="note warn" hidden></p>
+      <div class="stat-strip">
+        <div class="stat"><span class="value" id="delta-bytes"></span><span class="label">bytes</span></div>
+        <div class="stat"><span class="value" id="delta-saving"></span><span class="label">saved vs full</span></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ==================================================== 3. corruption ===== -->
+<section class="panel" id="corruption">
+  <h2>3 · The corruption playground</h2>
+  <p class="muted">
+    Click a bit in the frame below to flip it — a bit error from a weak
+    signal, a battery sagging in the cold. Watch the CRC turn red and the
+    decoded reading turn to nonsense.
+  </p>
+
+  <div id="corrupt-map" class="byte-map"></div>
+  <div class="row">
+    <button id="corrupt-reset" type="button">Reset the frame</button>
+    <span id="corrupt-crc" class="tag"></span>
+  </div>
+  <div id="corrupt-decoded" class="decoded-grid"></div>
+
+  <h3>Run many frames at a bit error rate</h3>
+  <p class="muted">
+    Most bit errors are caught by the CRC and the frame is simply dropped.
+    The number that matters to an embedded engineer is the other one: how
+    many corrupted frames pass the CRC anyway and get treated as real data.
+    A 16-bit CRC misses roughly 1 in 65,536 (2<sup>-16</sup>) corrupted
+    frames, so seeing one takes tens of thousands of corrupted frames, not
+    just of frames sent — each run below adds to the running total so the
+    undetected count actually has a chance to show up.
+  </p>
+  <div class="row">
+    <label for="ber-slider" class="inline-label">Bit error rate</label>
+    <input type="range" id="ber-slider" min="0" max="50" value="8">
+    <span id="ber-value" class="mono"></span>
+    <button id="ber-run" class="primary" type="button">Run 2,000,000 frames</button>
+    <button id="ber-reset" type="button">Reset total</button>
+  </div>
+  <div id="ber-stats" class="stat-strip"></div>
+  <p class="faint" id="ber-expected"></p>
+  <canvas id="ber-canvas" width="1102" height="380"></canvas>
+</section>
+
+<!-- ==================================================== 4. battery ======== -->
+<section class="panel" id="battery">
+  <h2>4 · The battery budget</h2>
+  <p class="muted">
+    Transmitting costs milliamps for a fraction of a second; sleeping costs
+    microamps for the rest of the day. How often the meter reports, and how
+    many bytes it sends each time, are the two numbers that decide whether a
+    site visit happens in five years or in twenty.
+  </p>
+
+  <div class="grid two">
+    <div>
+      <label for="battery-interval">Transmit interval</label>
+      <input type="range" id="battery-interval" min="1" max="1440" value="15">
+      <p class="faint" id="battery-interval-value"></p>
+
+      <label for="battery-capacity">Battery capacity (mAh)</label>
+      <input type="range" id="battery-capacity" min="500" max="19000" value="2400">
+      <p class="faint" id="battery-capacity-value"></p>
+
+      <div class="stat-strip">
+        <div class="stat"><span class="value" id="years-full"></span><span class="label">years, full frames</span></div>
+        <div class="stat"><span class="value" id="years-delta"></span><span class="label">years, delta frames</span></div>
+        <div class="stat"><span class="value" id="years-gain"></span><span class="label">longer with delta</span></div>
+      </div>
+      <p class="faint">
+        At a short interval the payload dominates, so a smaller delta frame
+        buys real years. Stretch the interval far enough and transmissions
+        become rare — the battery is then limited by self-discharge, which
+        does not care how many bytes you send, so the delta advantage
+        shrinks towards ×1.00. That collapse is the self-discharge floor
+        showing up, not a bug in the comparison.
+      </p>
+    </div>
+    <div>
+      <h3>Battery life vs transmit interval</h3>
+      <canvas id="battery-canvas" width="560" height="280"></canvas>
+    </div>
+  </div>
+
+  <p class="faint">
+    Model and assumptions are stated in full in the README — this is an
+    illustrative order-of-magnitude estimate, not a datasheet simulation.
+  </p>
+</section>
+
+<footer class="page">
+  Meter Telemetry — a portfolio demo. See the README for the CRC choice, the
+  bit layout, and what the power model does and does not claim.
+</footer>
+
+</div>
+<script type="module" src="app.js"></script>
+</body>
+</html>

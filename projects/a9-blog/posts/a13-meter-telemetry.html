@@ -1,0 +1,176 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Meter Telemetry — every bit costs battery, and some corruption gets through</title>
+<link rel="stylesheet" href="../../shared/theme.css">
+<link rel="stylesheet" href="../style.css">
+</head>
+<body>
+<div class="wrap">
+
+<nav class="post-nav">
+  <a href="../index.html">← All twelve projects</a>
+  <span class="faint">A13 · Meter Telemetry</span>
+</nav>
+
+<article class="post narrow">
+  <header class="page">
+    <p class="eyebrow">Writeup · A13</p>
+    <h1>Every bit costs battery, and some corruption gets through</h1>
+    <div class="meta">
+      <span>8 minute read</span>
+      <span>bit packing · CRC-16 · power budgets</span>
+    </div>
+    <p class="lede" style="margin-top:1rem">
+      A water meter sealed in a basement has one battery and a decade or more to
+      spend it. That decides the wire format, and the wire format decides what a
+      checksum can save you from.
+    </p>
+  </header>
+
+  <p><a class="demo" href="../../a13-meter-telemetry/index.html">Open the demo</a></p>
+
+  <h2><span class="step">1</span>The problem</h2>
+  <p>
+    Most software is written as though bytes are free, and for most software
+    they are. Embedded telemetry is where that stops working. A utility meter
+    is installed once, sealed, and expected to report for over a decade on a
+    single cell, and the radio is by far the most expensive thing it does.
+    Every bit is airtime, and airtime is milliamp-hours you do not get back.
+  </p>
+  <p>
+    So the reading gets packed at the bit width each field actually needs — and
+    that opens the second problem. Once a field is eleven bits wide and starts
+    partway through a byte, encoder and decoder have to agree on the layout
+    exactly, or a full-value field bleeds a bit into its neighbour and nothing
+    complains. And the third: the checksum catches most corruption, and the
+    fraction it misses is a number an engineer should be able to quote.
+  </p>
+
+  <h2><span class="step">2</span>What I built</h2>
+  <p>
+    A telemetry frame codec in the spirit of wireless M-Bus, with a page built
+    around four views of it. At the top, a byte map of a live frame where every
+    bit is coloured by the field it belongs to; move a slider and the bits
+    change. Below that, the same reading as a full frame and as a delta, side
+    by side with their sizes.
+  </p>
+  <p>
+    Then the corruption playground: click any bit in the byte map to flip it
+    and watch the CRC and the decode fail, or hand the frame to a seeded noisy
+    channel and get back an exact three-way count of frames intact, frames the
+    CRC caught, and frames corrupted that passed anyway. Last, a battery model
+    turning frame size and transmit interval into years before somebody drives
+    out to replace the meter.
+  </p>
+
+  <h2><span class="step">3</span>How it works</h2>
+  <p>
+    <code class="inline">BitWriter</code> and
+    <code class="inline">BitReader</code> in
+    <code class="inline">frame.js</code> move bits most-significant-first
+    straight across byte boundaries, so a field's width is not constrained by
+    alignment. A full frame carries a 1-bit frame type, a 24-bit meter ID, a
+    32-bit timestamp, 24 bits of cumulative volume, an 11-bit flow rate, 5 bits
+    of battery level and 5 alarm flag bits: 102 bits, padded to 13 bytes, plus
+    a 2-byte CRC. A delta frame replaces the absolute timestamp and volume with
+    a 16-bit and a 12-bit delta against the previous reading — 74 bits, 10
+    bytes, 12 with the CRC. Consecutive readings differ by very little, so most
+    transmissions can be the small one. A delta too large for its field throws
+    a <code class="inline">RangeError</code> rather than wrapping, because
+    silent wraparound surfaces as an impossible figure on a customer's bill
+    months later.
+  </p>
+  <p>
+    The checksum is CRC-16/CCITT-FALSE: polynomial
+    <code class="inline">0x1021</code>, init <code class="inline">0xFFFF</code>,
+    no reflection, no final XOR, computed bit by bit over the payload. Real
+    wireless M-Bus uses CRC-16/EN13757, which reflects both input and output. I
+    chose the non-reflected variant because its division is something you can
+    read off the register and believe, where a reflected CRC hides the same
+    arithmetic behind a bit-reversal that adds code and no understanding. It is
+    a real, named CRC, checked in the tests against its published value: the
+    CRC of the ASCII bytes
+    <code class="inline">"123456789"</code> is
+    <code class="inline">0x29B1</code>.
+  </p>
+  <p>
+    The channel flips each bit independently at a chosen error rate, driven by
+    a seeded mulberry32 generator so a run is reproducible. Each frame lands in
+    exactly one of three buckets — unchanged, rejected by the CRC, or changed
+    and accepted anyway — and a test asserts
+    <code class="inline">intact + caughtByCrc + undetected === total</code>
+    exactly. The third bucket is the number that matters: a 16-bit CRC misses
+    roughly one corrupted frame in 65,536, so over thousands of frames at a few
+    per cent bit error rate, a handful get through with a valid checksum and
+    wrong data.
+  </p>
+  <p>
+    The power model is arithmetic on stated constants. Airtime per frame is a
+    fixed wake-and-settle overhead plus bytes×8 over the bit rate; multiply by
+    transmit current and transmissions per year, add the sleep draw, divide
+    cell capacity by the total. That overhead is why a smaller payload helps
+    less than its byte count suggests.
+  </p>
+
+  <h2><span class="step">4</span>What was hard</h2>
+  <p>
+    Bit-level field layout looks trivial and is not. Get one shift or one field
+    order wrong and the frame still encodes, still decodes, and is wrong only
+    for certain values. The test that pins it puts every field at its maximum
+    at once and checks each one afterwards — the condition under which a
+    boundary bug bleeds into the next field. The suite is strong enough to
+    catch a decoder reading a different width than the encoder wrote, and a CRC
+    initialised with the wrong variant's constant.
+  </p>
+  <p>
+    The undetected-corruption count took discipline rather than cleverness. It
+    is easy to build a corruption demo that shows the CRC catching errors and
+    never asks about the ones it misses; that version looks better and teaches
+    less. Counting all three outcomes makes the blind spot a fact rather than a
+    footnote.
+  </p>
+  <p>
+    The battery model needed the opposite restraint. It is the most
+    impressive-looking output on the page and the least trustworthy, so it is
+    presented as an order of magnitude responding sensibly to frame size and
+    interval, not a figure to sign off.
+  </p>
+
+  <h2><span class="step">5</span>What it is not</h2>
+  <ul>
+    <li><strong>Not real wireless M-Bus.</strong> The field layout, frame
+      structure and CRC polynomial are this project's own design, in the spirit
+      of that protocol family rather than compliant with it. Do not point a
+      real meter reader at these frames.</li>
+    <li><strong>The power model is illustrative.</strong> Fixed wake overhead,
+      flat transmit current, flat sleep current, one bit rate. Real hardware
+      has ramp-up curves, temperature dependence, self-discharge and
+      duty-cycle rules that none of this touches.</li>
+    <li><strong>The channel is i.i.d. bit flips.</strong> Real radio channels
+      produce correlated bursts of errors, not independent per-bit ones —
+      enough to make the blind spot visible, not to model a link budget.</li>
+    <li><strong>No link layer around the frame.</strong> No addressing beyond
+      the meter ID, no encryption, no acknowledgement or retransmission.</li>
+  </ul>
+  <p class="muted">
+    Every constant on the page is a named, overridable field in
+    <code class="inline">power.js</code> and
+    <code class="inline">channel.js</code>. Nothing shown is a number typed
+    into a document and never checked against the code behind it.
+  </p>
+
+  <div class="readmore">
+    <a class="demo" href="../../a13-meter-telemetry/index.html">Open the demo</a>
+    <a class="writeup" href="../../a13-meter-telemetry/README.md">Read the README</a>
+    <a class="writeup" href="../index.html">Back to all twelve projects</a>
+  </div>
+</article>
+
+<footer class="page">Carl-Emil Heiselberg Andersen · Aarhus, Denmark</footer>
+
+</div>
+</body>
+</html>

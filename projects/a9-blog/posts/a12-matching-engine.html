@@ -1,0 +1,177 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Matching Engine — the average is a lie, the tail is the system</title>
+<link rel="stylesheet" href="../../shared/theme.css">
+<link rel="stylesheet" href="../style.css">
+</head>
+<body>
+<div class="wrap">
+
+<nav class="post-nav">
+  <a href="../index.html">← All twelve projects</a>
+  <span class="faint">A12 · Matching Engine</span>
+</nav>
+
+<article class="post narrow">
+  <header class="page">
+    <p class="eyebrow">Writeup · A12</p>
+    <h1>The average is a lie, the tail is the system</h1>
+    <div class="meta">
+      <span>8 minute read</span>
+      <span>order book · price-time priority · latency percentiles</span>
+    </div>
+    <p class="lede" style="margin-top:1rem">
+      Mean latency is the number everyone reports and nobody is hurt by. The
+      slowest one operation in a thousand is the one that ruins the day, and
+      it takes a log-scale histogram to even see it.
+    </p>
+  </header>
+
+  <p><a class="demo" href="../../a12-matching-engine/index.html">Open the demo</a></p>
+
+  <h2><span class="step">1</span>The problem</h2>
+  <p>
+    Two things about order matching are hard to convey without showing them.
+    The first is that "match buyers with sellers" hides a strict fairness rule
+    — best price first, and within a price, strictly in arrival order — that an
+    implementation can break in ways no casual test notices. The second is that
+    performance here is not one number: quote a mean latency and you have
+    described the operations nobody was waiting on.
+  </p>
+  <p>
+    Tail latency is where the behaviour actually lives, and it deserves a
+    picture rather than a claim. A histogram on a linear axis will not give you
+    one: matching latency spans several orders of magnitude, so everything
+    collapses into a single spike at the left edge with the interesting part
+    invisible off to the right.
+  </p>
+
+  <h2><span class="step">2</span>What I built</h2>
+  <p>
+    On the left, a working limit order book: sells stacked above buys, the
+    spread highlighted between them, quantity bars per price level, and a trade
+    tape. Submit a limit order, a market order or a cancel and the ladder
+    moves.
+  </p>
+  <p>
+    On the right is the reason the project exists. Press "Run 50,000 orders"
+    and a seeded stream of plausible order flow — mostly passive orders resting
+    near the touch, some aggressive ones that cross the spread, some cancels —
+    runs through the same engine with every operation timed by
+    <code class="inline">performance.now()</code>. The result is a latency
+    histogram on a logarithmic x-axis with p50, p99 and p99.9 drawn as labelled
+    vertical lines. The distance between the first line and the last is the
+    whole argument.
+  </p>
+
+  <h2><span class="step">3</span>How it works</h2>
+  <p>
+    Each side of the book is an array of price levels kept sorted by
+    binary-search insert: bids descending, asks ascending, so index 0 is always
+    the best price on that side. Matching an incoming order repeatedly takes
+    <code class="inline">levels[0]</code> of the opposite side, checks it
+    crosses, and fills against it until one runs out. Best-price priority is
+    structural rather than something the matching code has to remember.
+  </p>
+  <p>
+    Within a level, resting orders sit in a plain array in arrival order and
+    are never reordered. Time priority comes from a
+    <code class="inline">head</code> pointer that advances past orders which
+    are fully filled or cancelled, leaving them in place. This is what the data
+    structure is chosen for: splicing a cancelled order out of the middle would
+    shift every order behind it, silently renumbering their queue positions —
+    precisely the bug price-time priority cannot tolerate. Skipping rather than
+    removing is also amortised O(1), since each order is skipped once ever.
+  </p>
+  <p>
+    Measurement lives in <code class="inline">latency.js</code>.
+    <code class="inline">LatencyRecorder</code> writes samples by index into a
+    preallocated <code class="inline">Float64Array</code> rather than pushing
+    onto a growing array, because a backing-store reallocation, or a garbage
+    collection it triggers, landing inside the timed operation perturbs the
+    exact thing you are measuring. Percentiles come from a sorted copy, never
+    the live buffer, using linear interpolation at
+    <code class="inline">rank = p × (n − 1)</code> — the convention NumPy's
+    default and most APM tools use, documented in the source because percentile
+    conventions disagree at the edges and silently produce different numbers.
+    On a thousand samples, p99.9 is not "index 999", which would be the
+    maximum; it is 99.9 per cent of the way from sample 998 to sample 999. A
+    test pins that against a known 1..1000 array.
+  </p>
+  <p>
+    The chart buckets samples evenly in log space between the smallest positive
+    sample and the largest, and places the percentile markers through the same
+    log transform as the axis rather than as a fraction of a linear range.
+    Getting that wrong is how a log chart ends up with correct bars and markers
+    in the wrong place.
+  </p>
+  <p>
+    Correctness is held down by two invariants checked over a 20,000-action
+    seeded run rather than by example tests alone. Conservation: every trade
+    fills exactly one buyer and one seller by the same quantity, and no order
+    ever fills past its original size. Never-crossed: after every operation,
+    the best bid stays strictly below the best ask. Both are the kind of
+    property that survives a hundred hand-written cases and then fails under
+    sustained random pressure.
+  </p>
+
+  <h2><span class="step">4</span>What was hard</h2>
+  <p>
+    Measuring without the measurement lying. It is easy to write a benchmark
+    whose own bookkeeping dominates what it reports, and the failure is
+    invisible — you get plausible numbers, just not numbers about the thing you
+    meant. The preallocated buffer, the copy before sorting, and keeping the
+    timed region to the apply step alone are all in service of that.
+  </p>
+  <p>
+    The percentile convention was the other place to slow down. Two reasonable
+    implementations of p99.9 disagree everywhere except p50 on an odd-length
+    array, and neither is wrong — they are different definitions. Picking one,
+    writing down which and why, and testing it against a hand-checkable array
+    was cheaper than discovering later that the chart and the summary table
+    were computed by different rules.
+  </p>
+  <p>
+    Cancellation shaped the data structure. Everything else about a price level
+    would be simpler with a removal, and a removal is exactly what the fairness
+    rule forbids.
+  </p>
+
+  <h2><span class="step">5</span>What it is not</h2>
+  <ul>
+    <li><strong>Not a production matching engine.</strong> Limit and market
+      orders only — no stop, iceberg or pegged orders, no risk checks, no
+      persistence, no multi-instrument book, no network.</li>
+    <li><strong>The timings are a browser's, not an exchange's.</strong>
+      <code class="inline">performance.now()</code> in a browser tab measures
+      this implementation's own cost with JIT warm-up and GC pauses from the
+      rest of the page mixed in. It demonstrates the methodology honestly; it
+      is not comparable to a co-located C++ engine.</li>
+    <li><strong>The order flow is a caricature.</strong> Its mix of passive,
+      aggressive and cancel actions is hand-picked to produce a
+      realistic-looking book, not fitted to real market microstructure
+      data.</li>
+    <li><strong>Levels are a sorted array with binary-search insert,</strong>
+      not the hash map plus ordered index, or skip list, a real book uses at
+      higher order rates — the right trade-off at this scale, not a venue's.</li>
+  </ul>
+  <p class="muted">
+    It is the matching and measurement core in isolation. The interesting
+    output is the shape of the histogram, not the numbers on its axis.
+  </p>
+
+  <div class="readmore">
+    <a class="demo" href="../../a12-matching-engine/index.html">Open the demo</a>
+    <a class="writeup" href="../../a12-matching-engine/README.md">Read the README</a>
+    <a class="writeup" href="../index.html">Back to all twelve projects</a>
+  </div>
+</article>
+
+<footer class="page">Carl-Emil Heiselberg Andersen · Aarhus, Denmark</footer>
+
+</div>
+</body>
+</html>

@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Carl-Emil Heiselberg Andersen — ten interactive demos</title>
+<title>Carl-Emil Heiselberg Andersen — twelve interactive demos</title>
 <link rel="stylesheet" href="../shared/theme.css">
 <link rel="stylesheet" href="style.css">
 </head>
@@ -12,11 +12,11 @@
 
 <header class="page">
   <p class="eyebrow">Portfolio · cryptography and programming languages</p>
-  <h1>Ten things I built to be poked at</h1>
+  <h1>Twelve things I built to be poked at</h1>
   <p class="lede">
     Cryptography and programming-language work is hard to show on a CV: the
     interesting part is a protocol or an algorithm, and both are invisible.
-    So each of these ten demos takes one such mechanism and puts it on
+    So each of these twelve demos takes one such mechanism and puts it on
     screen where you can step through it, break it, and watch it react.
     Everything runs in your browser. No build step, no dependencies, no
     server, no network calls.
@@ -212,6 +212,7 @@
       </div>
       <div class="actions">
         <a class="demo" href="../a10-signed-delivery/index.html">Open the demo</a>
+        <a class="writeup" href="posts/a10-signed-delivery.html">Read the writeup</a>
       </div>
     </article>
 
@@ -232,6 +233,47 @@
       </div>
       <div class="actions">
         <a class="demo" href="../a11-infra-pivot/index.html">Open the demo</a>
+        <a class="writeup" href="posts/a11-infra-pivot.html">Read the writeup</a>
+      </div>
+    </article>
+
+    <article class="panel card">
+      <span class="num">A12</span>
+      <h3>Matching Engine</h3>
+      <p class="pitch">
+        An order book that matches buyers with sellers by strict price and
+        arrival order, and times every operation to show the thing an average
+        hides: the slowest one in a thousand.
+      </p>
+      <div class="tags">
+        <span class="tag">order book</span>
+        <span class="tag">price-time priority</span>
+        <span class="tag">tail latency</span>
+        <span class="tag">percentiles</span>
+      </div>
+      <div class="actions">
+        <a class="demo" href="../a12-matching-engine/index.html">Open the demo</a>
+        <a class="writeup" href="posts/a12-matching-engine.html">Read the writeup</a>
+      </div>
+    </article>
+
+    <article class="panel card">
+      <span class="num">A13</span>
+      <h3>Meter Telemetry</h3>
+      <p class="pitch">
+        A utility meter's radio message packed bit by bit to fit a battery
+        that has to survive a decade or more in the field. Click a bit to flip
+        it and watch the checksum catch it, or not.
+      </p>
+      <div class="tags">
+        <span class="tag">bit packing</span>
+        <span class="tag">CRC-16</span>
+        <span class="tag">embedded</span>
+        <span class="tag">power budget</span>
+      </div>
+      <div class="actions">
+        <a class="demo" href="../a13-meter-telemetry/index.html">Open the demo</a>
+        <a class="writeup" href="posts/a13-meter-telemetry.html">Read the writeup</a>
       </div>
     </article>
 

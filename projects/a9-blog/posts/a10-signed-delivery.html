@@ -1,0 +1,173 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Signed Delivery — a chain of trust, broken one link at a time</title>
+<link rel="stylesheet" href="../../shared/theme.css">
+<link rel="stylesheet" href="../style.css">
+</head>
+<body>
+<div class="wrap">
+
+<nav class="post-nav">
+  <a href="../index.html">← All twelve projects</a>
+  <span class="faint">A10 · Signed Delivery</span>
+</nav>
+
+<article class="post narrow">
+  <header class="page">
+    <p class="eyebrow">Writeup · A10</p>
+    <h1>A chain of trust, broken one link at a time</h1>
+    <div class="meta">
+      <span>8 minute read</span>
+      <span>ECDSA · WebCrypto · certificate chains</span>
+    </div>
+    <p class="lede" style="margin-top:1rem">
+      A signature that verifies tells you almost nothing on its own. What
+      matters is which link in the chain behind it broke, and which ones
+      did not.
+    </p>
+  </header>
+
+  <p><a class="demo" href="../../a10-signed-delivery/index.html">Open the demo</a></p>
+
+  <h2><span class="step">1</span>The problem</h2>
+  <p>
+    Digital signatures are usually taught as a single yes-or-no question: the
+    signature is valid, or it is not. That framing is where most of the
+    confusion about certificates comes from, because a browser padlock is not
+    the answer to one question. It answers a sequence of them, asked of a chain
+    of certificates, each vouching for the next.
+  </p>
+  <p>
+    The consequence is that "invalid certificate" is one of the least
+    informative errors in computing. An expired intermediate, a signature that
+    does not match, and a root nobody has agreed to trust are three different
+    failures with three different fixes, and a verifier that stops at the first
+    problem it meets cannot tell you which one you have. Worse, it encourages
+    the belief that a broken link contaminates the rest of the chain, which is
+    not how the mathematics works at all.
+  </p>
+
+  <h2><span class="step">2</span>What I built</h2>
+  <p>
+    Part 1 is the plain case. Type a message, press sign, and the page
+    generates a real ECDSA key pair with the browser's own WebCrypto and signs
+    the bytes of your text. The public key and the signature are shown in hex.
+    Then there are three buttons that break it: alter the message, alter the
+    signature, or verify against the wrong sender's key.
+  </p>
+  <p>
+    Part 2 is the part worth the visit. It builds a three-certificate chain —
+    a root CA, an intermediate, an end certificate — and lets you attack any
+    single link: corrupt the root CA's signature, expire the intermediate, or
+    remove the root from the trusted set. Each attack lights up exactly one
+    link with the reason it failed, and the other two keep reporting themselves
+    as fine. Trust in a chain is not one verdict, it is a list of them.
+  </p>
+
+  <h2><span class="step">3</span>How it works</h2>
+  <p>
+    Signing is ECDSA over P-256, done by
+    <code class="inline">crypto.subtle</code> rather than reimplemented. Curve
+    arithmetic is not the interesting part here and a hand-rolled version would
+    be a liability rather than a demonstration; the interesting part is what
+    gets signed and what a verifier does with the result.
+  </p>
+  <p>
+    A certificate here is a plain JavaScript object with the five fields the
+    trust story actually needs: subject, issuer, notBefore, notAfter, and the
+    subject's public key. Issuing one serialises exactly those fields, in a
+    fixed order defined by <code class="inline">canonicalFields</code> in
+    <code class="inline">trust-chain.js</code>, and signs the resulting bytes
+    with the issuer's private key. The fixed order is the whole reason it
+    works: signer and verifier must produce byte-identical input or the check
+    fails for a reason that has nothing to do with trust. This is deliberately
+    not X.509 or DER, which sidesteps ASN.1 entirely and keeps the signed bytes
+    readable straight out of the source.
+  </p>
+  <p>
+    <code class="inline">validateChain</code> walks the chain from root to
+    leaf and, for each certificate, asks three independent questions: does its
+    signature verify under its issuer's public key (for the root, its own), is
+    it in date, and — for the root only — is its key in the trusted set. The
+    first failing answer becomes that link's reason, drawn from a small
+    enumeration: <code class="inline">signature-invalid</code>,
+    <code class="inline">expired</code>,
+    <code class="inline">untrusted-root</code>. Crucially the loop does not
+    return early. Every link is evaluated whatever happened to the ones before
+    it, and the result is a list of per-link verdicts alongside a single
+    overall boolean.
+  </p>
+  <p>
+    That is what makes the demo honest rather than merely colourful. If you
+    expire the intermediate, the leaf's own signature check still passes, and
+    it should: the leaf's signature genuinely does not depend on whether its
+    issuer's certificate is in date. The chain is invalid, the leaf link is
+    not, and saying so precisely is more useful than a blanket red cross. The
+    tests assert on <em>which</em> link fails and with which reason, not just
+    that validation returned false.
+  </p>
+
+  <h2><span class="step">4</span>What was hard</h2>
+  <p>
+    Resisting the early return. The natural way to write a chain validator is
+    to bail the moment something is wrong, and for a production verifier that
+    is correct — there is no reason to keep computing once trust is gone. But
+    it destroys the only thing this page exists to show. Getting it right meant
+    separating the per-link verdict from the overall one, so the UI can display
+    "this link broke, these did not" without the code pretending a broken chain
+    is acceptable.
+  </p>
+  <p>
+    The second difficulty was canonicalisation, the classic place signature
+    systems go wrong. Signing a serialised object means the exact bytes matter,
+    and JavaScript object key order is close enough to predictable that a bug
+    here hides for a long time before surfacing. Pinning the field set and
+    order in one named function, used by both the issuing path and the
+    verifying path, is the smallest structure that makes the mistake impossible
+    rather than unlikely.
+  </p>
+  <p>
+    The attacks also had to be real. Faking a failure with a flag would have
+    been easy; instead each one mutates the actual data — a byte of the
+    signature, a date field, the trusted-root list — and the same validator
+    that reports success reports the failure.
+  </p>
+
+  <h2><span class="step">5</span>What it is not</h2>
+  <ul>
+    <li><strong>Not X.509.</strong> Certificates are plain JS objects signed
+      over canonical JSON. There is no DER parsing, no ASN.1, and nothing here
+      would read a certificate a real CA issued.</li>
+    <li><strong>No extensions.</strong> No basic constraints, key usage,
+      path-length limits or name constraints — the fields a real validator
+      spends most of its code on.</li>
+    <li><strong>No revocation.</strong> Neither CRL nor OCSP. A compromised
+      certificate stays valid here until it expires.</li>
+    <li><strong>No chaining rules beyond signature and dates.</strong> A real
+      validator checks that the issuer name matches, that the issuer is
+      permitted to be a CA at all, and much else.</li>
+    <li><strong>Keys live for one page load.</strong> Key pairs are generated
+      fresh in memory every time the page opens and never touch disk. No key
+      management, no storage, no CA that outlives the tab.</li>
+  </ul>
+  <p class="muted">
+    It demonstrates the shape of the trust problem and the precision a
+    verifier can offer when it is written to be informative. It is not a PKI
+    implementation.
+  </p>
+
+  <div class="readmore">
+    <a class="demo" href="../../a10-signed-delivery/index.html">Open the demo</a>
+    <a class="writeup" href="../../a10-signed-delivery/README.md">Read the README</a>
+    <a class="writeup" href="../index.html">Back to all twelve projects</a>
+  </div>
+</article>
+
+<footer class="page">Carl-Emil Heiselberg Andersen · Aarhus, Denmark</footer>
+
+</div>
+</body>
+</html>

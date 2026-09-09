@@ -1,0 +1,155 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Matching Engine — the average is a lie</title>
+<link rel="stylesheet" href="../shared/theme.css">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="wrap">
+
+<header class="page">
+  <p class="eyebrow">A12 · matching engine &amp; latency</p>
+  <h1>A limit order book, and the tail that actually matters</h1>
+  <p class="lede">
+    A real price-time-priority matching engine, built from scratch, driving
+    a live order book on the left. On the right: every operation timed and
+    turned into a latency distribution. The average is a lie — the number
+    that decides whether this system is good enough is the slowest 1 order
+    in 1000.
+  </p>
+</header>
+
+<!-- ------------------------------------------------ book + controls -->
+<section>
+  <div class="grid side">
+
+    <div class="panel">
+      <div class="spread">
+        <h2>Order book</h2>
+        <span class="tag" id="spread-tag">spread —</span>
+      </div>
+      <div id="ladder" class="ladder"></div>
+    </div>
+
+    <div>
+      <div class="panel">
+        <h2>Send an order</h2>
+        <div class="controls">
+          <div class="ctl">
+            <label for="side-select">Side</label>
+            <select id="side-select">
+              <option value="buy">Buy</option>
+              <option value="sell">Sell</option>
+            </select>
+          </div>
+          <div class="ctl">
+            <label for="price-input">Price <span class="faint">(limit only)</span></label>
+            <input type="number" id="price-input" step="1" value="10000">
+          </div>
+          <div class="ctl">
+            <label for="qty-input">Quantity</label>
+            <input type="number" id="qty-input" min="1" step="1" value="10">
+          </div>
+        </div>
+        <div class="row" style="margin-top:.85rem">
+          <button class="primary" id="limit-btn">Submit limit order</button>
+          <button id="market-btn">Submit market order</button>
+        </div>
+        <div class="row" style="margin-top:.6rem">
+          <label for="cancel-input" style="margin:0">Cancel order id</label>
+          <input type="number" id="cancel-input" min="1" step="1" style="width:8rem">
+          <button id="cancel-btn">Cancel</button>
+        </div>
+        <p class="faint" id="order-status" style="margin:.6rem 0 0">Book preloaded with 60 resting orders. Submit an order priced to cross the spread to see it trade.</p>
+      </div>
+
+      <div class="panel">
+        <div class="spread">
+          <h2>Trade tape</h2>
+          <span class="faint" id="tape-count">0 trades</span>
+        </div>
+        <div id="tape" class="tape"></div>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<!-- ------------------------------------------------ run flow -->
+<section>
+  <div class="spread">
+    <h2>Drive it with real order flow, measured</h2>
+    <span class="tag" id="run-tag">not run yet</span>
+  </div>
+  <div class="panel">
+    <p class="muted" style="margin-top:0">
+      Streams generated order flow through the engine — mostly passive
+      limit orders near the touch, occasional aggressive orders that cross
+      the spread, some cancels — and times it with
+      <code class="inline">performance.now()</code>, in batches (see below for
+      why). Same seed, same orders, every time.
+    </p>
+    <div class="row">
+      <button class="primary" id="run-btn">Run 50,000 orders</button>
+      <label for="seed-input" style="margin:0">Seed</label>
+      <input type="number" id="seed-input" min="0" step="1" value="1" style="width:7rem">
+      <button id="reset-btn">Reset book</button>
+      <span class="faint" id="run-status">the book below is preloaded and ready to poke at</span>
+    </div>
+  </div>
+</section>
+
+<!-- ------------------------------------------------ latency -->
+<section>
+  <h2>Latency distribution — the number that matters</h2>
+  <div class="panel">
+    <p class="muted" style="margin-top:0">
+      Most orders are fast. The question that decides whether a matching
+      engine is production-grade is not the average — it is how bad the
+      slowest 1 in 1000 gets. The x-axis below is <strong>logarithmic</strong>
+      because the interesting part of this distribution spans several orders
+      of magnitude that a linear axis would crush into one spike.
+    </p>
+    <p class="muted">
+      <strong>Why "averaged over batches":</strong> browsers deliberately
+      coarsen <code class="inline">performance.now()</code> (a side-channel
+      mitigation) to a tick — often 0.1&nbsp;ms — that a single order-book
+      operation cannot clear. Timing one operation directly just measures the
+      clock's own step function. So this page times <strong>batches</strong>
+      of <var>K</var> operations with one <code class="inline">performance.now()</code>
+      pair, divides by <var>K</var>, and takes one sample per batch — <var>K</var>
+      is picked at runtime to comfortably clear the clock's measured
+      resolution, shown below. The stats and chart are honestly labelled:
+      they are per-operation cost <em>averaged over each batch</em>, with
+      percentiles computed <em>across batches</em> — smoother than a true
+      per-operation distribution, and unable to surface a genuine single-op
+      outlier the way per-operation timing would if this clock allowed it.
+    </p>
+    <div class="grid side">
+      <canvas id="latency-chart"></canvas>
+      <div class="stat-col">
+        <div class="stat"><span class="value" id="stat-throughput">—</span><span class="label">orders / second</span></div>
+        <div class="stat"><span class="value" id="stat-p50">—</span><span class="label">p50 batch avg (µs/op)</span></div>
+        <div class="stat"><span class="value" id="stat-p90">—</span><span class="label">p90 batch avg (µs/op)</span></div>
+        <div class="stat"><span class="value" id="stat-p99">—</span><span class="label">p99 batch avg (µs/op)</span></div>
+        <div class="stat"><span class="value" id="stat-p999">—</span><span class="label">p99.9 batch avg (µs/op)</span></div>
+        <div class="stat"><span class="value" id="stat-max">—</span><span class="label">worst batch avg (µs/op)</span></div>
+      </div>
+    </div>
+    <p class="faint" id="latency-note" style="margin-top:.75rem">Run the order flow above to populate this.</p>
+  </div>
+</section>
+
+<footer class="page">
+  Matching Engine. Price-time priority book, seeded order-flow generator and
+  latency instrumentation are plain ES modules with no dependencies; see the
+  README for what this is not.
+</footer>
+
+</div>
+<script type="module" src="app.js"></script>
+</body>
+</html>

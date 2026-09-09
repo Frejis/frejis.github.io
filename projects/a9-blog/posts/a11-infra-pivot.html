@@ -1,0 +1,169 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Infrastructure Pivot — telling a lead apart from a coincidence</title>
+<link rel="stylesheet" href="../../shared/theme.css">
+<link rel="stylesheet" href="../style.css">
+</head>
+<body>
+<div class="wrap">
+
+<nav class="post-nav">
+  <a href="../index.html">← All twelve projects</a>
+  <span class="faint">A11 · Infrastructure Pivot</span>
+</nav>
+
+<article class="post narrow">
+  <header class="page">
+    <p class="eyebrow">Writeup · A11</p>
+    <h1>Telling a lead apart from a coincidence</h1>
+    <div class="meta">
+      <span>8 minute read</span>
+      <span>pivoting · selectivity · force-directed layout</span>
+    </div>
+    <p class="lede" style="margin-top:1rem">
+      Two servers sharing a fingerprint might be the same operator, or might
+      be two of the forty thousand machines running the same default install.
+      The difference is arithmetic, not intuition.
+    </p>
+  </header>
+
+  <p><a class="demo" href="../../a11-infra-pivot/index.html">Open the demo</a></p>
+
+  <h2><span class="step">1</span>The problem</h2>
+  <p>
+    Infrastructure attribution works by pivoting. You start from one host,
+    notice something it exposes — a TLS certificate, an SSH host key, the hash
+    of its favicon — and ask which other hosts expose the same thing. Repeat,
+    and a set of apparently unrelated servers turns into a cluster with a shape
+    to it.
+  </p>
+  <p>
+    The failure mode is obvious once stated and easy to walk into anyway. Not
+    every shared trait means anything. Two hosts sharing a self-signed
+    certificate almost certainly share an operator. Two sharing a TLS client
+    fingerprint may share nothing but a version of OpenSSL, and two behind the
+    same large cloud provider share a landlord. A pivot tool that treats those
+    three the same will grow a "cluster" out of background noise, and the graph
+    it draws will look every bit as convincing as a real one.
+  </p>
+
+  <h2><span class="step">2</span>What I built</h2>
+  <p>
+    Ninety synthetic hosts, each carrying a certificate fingerprint and issuer,
+    an SSH host key fingerprint, a JA3 TLS client fingerprint, a favicon hash,
+    a server header and a hosting provider. Start from one host and every
+    artifact it has is offered as a pivot, labelled with how many hosts carry
+    that same value and colour-coded by what that count is worth. Take a pivot
+    and the selection grows to every matching host while a force-directed graph
+    redraws around the new cluster. A trail on the right records each step, so
+    you can walk back.
+  </p>
+  <p>
+    There is also a button labelled "pivot on a common trait", which does
+    exactly that and floods the selection with unrelated hosts. It makes the
+    point physically rather than in a caption: this is what following a
+    worthless trait feels like.
+  </p>
+
+  <h2><span class="step">3</span>How it works</h2>
+  <p>
+    The core idea is <em>selectivity</em>. For an artifact value,
+    <code class="inline">computeSelectivity</code> in
+    <code class="inline">selectivity.js</code> counts how many of the ninety
+    hosts carry it and turns that count into a score of 1 − (count − 1)/total,
+    so a value unique to one host scores 1 and a near-universal one scores near
+    0. On top sit two absolute thresholds: at most five hosts is strong
+    evidence, at most fifteen is worth noting, above that is background. Host
+    counts rather than ratios read sensibly at this dataset's size, and they
+    live in one place. That score drives the tag colour on every pivot option
+    and the ranking of candidates.
+  </p>
+  <p>
+    Pivoting itself is deliberately plain. <code class="inline">applyPivot</code>
+    takes a session and returns a new one, never mutating the input, with the
+    matching host IDs unioned into the selection and the step appended to a
+    history recording the field, the value, which hosts were newly added and
+    the selectivity that added them. Undo recomputes from the start host by
+    replaying the remaining steps rather than subtracting the last one, because
+    a later pivot may have re-added a host an earlier one also brought in, and
+    subtraction would quietly remove it.
+  </p>
+  <p>
+    The dataset comes from a fixed seed, but its structure is code rather than
+    chance: which host indices belong to which cluster and which artifacts they
+    share is written out explicitly, while only the artifact values and the
+    noise hosts' fields come from the generator. That makes "does pivoting
+    actually reach cluster C" a testable claim instead of a hope about a random
+    layout.
+  </p>
+  <p>
+    Each of the four planted clusters has the same deliberate shape. A core of
+    three or four hosts shares a strong artifact — a self-signed certificate
+    and SSH key, a distinctive favicon, a private certificate authority — and
+    one further host shares exactly one trait with exactly one member of that
+    core. A single pivot finds the core and misses the bridge; you have to
+    pivot again, from the right host, to reach it. That is the honest shape of
+    the work: the first pivot is never the answer.
+  </p>
+
+  <h2><span class="step">4</span>What was hard</h2>
+  <p>
+    Making "this trait is worthless" something the user feels rather than
+    reads. Any tool can print a confidence number next to a result. The version
+    that teaches something has to let you take the bad pivot and watch a
+    coherent handful of hosts dissolve into a crowd with nothing in common,
+    which meant building realistic noise into the dataset: a JA3 hash on
+    roughly sixty per cent of hosts because it is just what a common TLS
+    library's handshake looks like, and a provider ASN behind a large slice of
+    the rest.
+  </p>
+  <p>
+    Wiring the bridge hosts into a seeded generator was the fiddly part. Every
+    artifact value comes out of the PRNG, but the relationships have to be
+    exact — this host shares the SSH key and not the certificate, that one
+    shares a rare JA3 with precisely one core member — and survive the noise
+    overlays applied afterwards. That took more care than the force layout.
+  </p>
+  <p>
+    The last decision was about the subject matter. Scraping real data would
+    have been simple and wrong for something published on a portfolio site, so
+    everything is manufactured locally: IP addresses from the RFC 5737
+    documentation ranges, domains from the RFC 2606 reserved TLDs, organisation
+    names invented. Nothing can collide with a real host.
+  </p>
+
+  <h2><span class="step">5</span>What it is not</h2>
+  <ul>
+    <li><strong>Every row is synthetic.</strong> Hosts, IPs, certificates and
+      organisation names come from a fixed seed. None of it was observed,
+      scraped or looked up, and no real host, IP range or organisation appears
+      anywhere in the dataset.</li>
+    <li><strong>No network calls of any kind.</strong> Everything is computed
+      in the browser from data built at load time. It does not talk to Shodan,
+      Censys, VirusTotal or anything else.</li>
+    <li><strong>Not a scanning or ingestion tool.</strong> Real attribution
+      platforms index internet-wide scan data and certificate transparency logs
+      continuously. This imitates none of that.</li>
+    <li><strong>The selectivity thresholds are chosen, not derived.</strong>
+      Five and fifteen hosts are sensible cutoffs for a dataset of ninety, not
+      a model of how rare a fingerprint is on the real internet.</li>
+    <li><strong>A model of the reasoning, not the work.</strong> The question
+      it answers is which artifacts corroborate a link and which do not. Doing
+      that against real infrastructure is a different job.</li>
+  </ul>
+
+  <div class="readmore">
+    <a class="demo" href="../../a11-infra-pivot/index.html">Open the demo</a>
+    <a class="writeup" href="../../a11-infra-pivot/README.md">Read the README</a>
+    <a class="writeup" href="../index.html">Back to all twelve projects</a>
+  </div>
+</article>
+
+<footer class="page">Carl-Emil Heiselberg Andersen · Aarhus, Denmark</footer>
+
+</div>
+</body>
+</html>
