@@ -122,7 +122,37 @@ Rules:
    Charts already on screen do not repaint themselves, and a dark chart on a
    light page is the most obvious possible defect.
 
-4. **Both palettes must be legible.** A colour that reads well on near-black
+   **The redraw must be synchronous.** Do not defer it to `setTimeout`,
+   `requestAnimationFrame`, an `await`, or a fetch. Where the browser supports
+   it, the toggle switches inside `document.startViewTransition`, which
+   snapshots the page the moment the callback returns; a deferred redraw means
+   the old canvas is what gets cross-faded in. This was merely good practice
+   before the cross-fade and is load-bearing now.
+
+4. **The switch cross-fades, and the page must not fight it.** Pressing the
+   toggle takes one of three paths, decided per press:
+
+   - `prefers-reduced-motion: reduce` - switch instantly, no animation. This
+     overrides the other two (WCAG 2.3.3) and is re-checked at every switch,
+     because a reader can change the setting mid-session.
+   - `document.startViewTransition` available - the View Transitions API
+     cross-fades over `--theme-fade` (250ms), easing `--theme-fade-ease`, both
+     set in `theme.css`. It snapshots canvas pixels, so charts fade with
+     everything else.
+   - otherwise (Firefox today) - `theme.css` transitions
+     `background-color`, `color`, `border-color` and `fill` on a named list of
+     elements while `<html>` carries `.theme-fading`. Canvases snap instantly
+     on this path; that is accepted, not a bug to work around.
+
+   The animation only ever runs from a user action. The stored theme applied
+   during head parsing is never animated, or the page would fade in from the
+   wrong palette. The OS-preference change listener is also not animated: it
+   fires unattended, and a cross-fade should mean "what you just pressed is
+   taking effect". Nothing about the `themechange` contract changes - one
+   event per switch, on `document`, with `detail.theme`, after the attribute
+   is set.
+
+5. **Both palettes must be legible.** A colour that reads well on near-black
    often fails on near-white. Check text, borders, disabled controls, chart
    gridlines and every status colour in both.
 

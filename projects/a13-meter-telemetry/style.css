@@ -141,3 +141,16 @@ button.bit:hover { outline: 1px solid var(--text); outline-offset: 1px; }
   .bit { width: .95rem; height: 1.25rem; font-size: .6rem; }
 }
 
+
+/* Path 2 fallback (see shared/theme.css): the shared selector list cannot name
+ * project-specific classes, so .byte, .frame-card and the decoded-grid fields
+ * would otherwise snap instead of fading. .bit is deliberately excluded - a13
+ * renders hundreds of them, and transitioning every chip is real jank. */
+html.theme-fading .byte,
+html.theme-fading .frame-card,
+html.theme-fading .decoded-grid .field {
+  transition:
+    background-color var(--theme-fade) var(--theme-fade-ease),
+    color var(--theme-fade) var(--theme-fade-ease),
+    border-color var(--theme-fade) var(--theme-fade-ease);
+}
