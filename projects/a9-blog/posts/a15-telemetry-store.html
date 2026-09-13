@@ -1,0 +1,186 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Telemetry Store — one bit per timestamp, and the number I did not get</title>
+<link rel="stylesheet" href="../../shared/theme.css">
+<link rel="stylesheet" href="../style.css">
+</head>
+<body>
+<div class="wrap">
+
+<nav class="post-nav">
+  <a href="../index.html">← All fourteen projects</a>
+  <span class="faint">A15 · Telemetry Store</span>
+</nav>
+
+<article class="post narrow">
+  <header class="page">
+    <p class="eyebrow">Writeup · A15</p>
+    <h1>One bit per timestamp, and the number I did not get</h1>
+    <div class="meta">
+      <span>8 minute read</span>
+      <span>Gorilla compression · time series · counter resets</span>
+    </div>
+    <p class="lede" style="margin-top:1rem">
+      A network that streams telemetry from every port produces a firehose of
+      numbers that barely change. The interesting engineering is in not
+      storing the part that did not change, and in the two bugs that show up
+      once you do.
+    </p>
+  </header>
+
+  <p><a class="demo" href="../../a15-telemetry-store/index.html">Open the demo</a></p>
+
+  <h2><span class="step">1</span>The problem</h2>
+  <p>
+    Streaming telemetry from network hardware is a stream of samples that are
+    almost, but not quite, the previous sample. A port reports every thirty
+    seconds, forever; the timestamps are spaced identically, the counters step
+    by similar amounts, the optical light level sits on one reading for
+    minutes. Stored the obvious way — eight bytes of timestamp and eight of
+    double per sample — almost all of that pays full price for information
+    already known.
+  </p>
+  <p>
+    Then the operational half. A counter that only ever increases is the
+    easiest thing in monitoring to compute a rate from, right up to the moment
+    the device reboots and it starts again near zero. And a detector meant to
+    catch a degrading link has to do it without crying wolf on a healthy one.
+  </p>
+
+  <h2><span class="step">2</span>What I built</h2>
+  <p>
+    A time-series database for a simulated fibre access network: OLTs with
+    several ports each, streaming rx/tx counters, optical light level,
+    temperature and CRC error counts every thirty seconds. On top of it, a
+    from-scratch implementation of the Gorilla compression scheme from
+    Pelkonen et al., "Gorilla: A Fast, Scalable, In-Memory Time Series
+    Database", VLDB 2015, the ancestor of Prometheus's chunk encoding and
+    InfluxDB's TSM engine.
+  </p>
+  <p>
+    The headline panel pushes a fleet's worth of samples through the
+    compressor and reports what it measured, never a figure from the paper —
+    quoting the paper's ratio would have been one line and looked three times
+    better. Below it: live charts with a time-window selector that exercises
+    downsampling, a label-matcher query panel, and a fault panel to degrade
+    optics, burst CRC errors, or reboot a node.
+  </p>
+
+  <h2><span class="step">3</span>How it works</h2>
+  <p>
+    Timestamps are stored as delta-of-delta, the second derivative of the time
+    axis, under the paper's bucket ladder: a single
+    <code class="inline">0</code> bit when the delta-of-delta is zero, then
+    <code class="inline">10</code> plus 7 bits,
+    <code class="inline">110</code> plus 9 bits,
+    <code class="inline">1110</code> plus 12 bits, and
+    <code class="inline">1111</code> plus a raw 32 bits as the escape. A
+    regular interval has a constant delta and therefore a zero delta-of-delta
+    every time, so it costs exactly one bit per timestamp.
+    <code class="inline">compress.test.js</code> asserts the encoded bit length
+    against hand-computed arithmetic — header, first delta, one bit each
+    thereafter — rather than only asserting a round trip, which would pass
+    happily if every timestamp cost forty bits.
+  </p>
+  <p>
+    Values are XORed against their predecessor and stored as a leading-zero
+    count, a meaningful-bit count and the meaningful bits, with the paper's
+    window-reuse optimisation: when the previous block's window still covers
+    this XOR, reuse it for two control bits. All of it runs on
+    <code class="inline">BigInt</code> bit I/O, since a millisecond timestamp
+    needs about 41 bits and a float64 pattern all 64, and JavaScript's bitwise
+    operators truncate to 32.
+  </p>
+  <p>
+    One deviation from the paper is documented in the source. It states its
+    bucket ranges inclusively as [-63, 64], [-255, 256], [-2047, 2048], one
+    more positive value than a two's-complement field of that width holds;
+    storing the value directly in two's complement, as this decoder reads it,
+    gives -64..63, -256..255, -2048..2047. The cost is an escape to the 32-bit
+    tier at exactly three values across the ladder, cheaper than a special
+    case in both encoder and decoder.
+  </p>
+  <p>
+
+    The measured result on this project's generated telemetry: 3.43 bytes per
+    sample, 27.4 bits per sample, 21.4 per cent of the naive 16-byte baseline.
+    100.0 per cent of timestamps cost exactly one bit; 39.3 per cent of values
+    XORed to zero. That is materially worse than the paper's famous ~1.4 bytes
+    per sample, and the reason is the data, not the codec: the simulation
+    averages five metric types, including noisy floats like temperature and
+    light level that change by a genuinely new amount most ticks, where
+    Facebook's series were dominated by counters that barely move. These
+    figures are from one run of the generator on this data.
+  </p>
+  <p>
+    Rate calculation treats any decrease in a counter as a reset and counts
+    only the post-reset increase, the convention Prometheus's
+    <code class="inline">rate()</code> uses, since a real counter never
+    legitimately runs backwards. The demo puts the naive calculation beside it
+    after you reboot a node, so the bug is visible rather than described:
+    across the reset the naive version reports -1.997 billion, the
+    reset-aware one 0. The anomaly detector on top is a rolling median plus a
+    median absolute deviation scaled by 1.4826, window of 12, flagging at 5
+    sigma.
+  </p>
+
+  <h2><span class="step">4</span>What was hard</h2>
+  <p>
+    The detector, and not for the reason I expected. A first version flagged
+    dozens of points on a clean, flat light-level series. The cause is
+    quantisation: an optical power meter reports to 0.1 dB, so a quiet window
+    is a run of identical values, the median absolute deviation of identical
+    values is exactly zero, and dividing by it puts the smallest possible
+    wobble infinitely many sigma from the median. The fix is a
+    <code class="inline">minDeviation</code> floor at the sensor's own
+    resolution: nothing below the step the instrument can resolve counts as
+    deviation. Both directions are pinned by tests — it must fire on an
+    injected degradation and stay silent on the baseline that produced the
+    bug.
+  </p>
+  <p>
+    Worth noting how that bug was found: not by the test suite, which was
+    green, but by opening the page and seeing a chart covered in markers with
+    no business being there. A flat quantised signal is exactly the input a
+    hand-written test case is least likely to contain, because it looks too
+    boring to be a case.
+  </p>
+
+  <h2><span class="step">5</span>What it is not</h2>
+  <ul>
+    <li><strong>Not a production time-series database.</strong> No durability,
+      write-ahead log, compaction, clustering or replication — everything
+      lives in memory for the lifetime of the tab.</li>
+    <li><strong>The anomaly detector is a threshold heuristic, not machine
+      learning.</strong> No concept of seasonality, trend, or simultaneous
+      fault modes.</li>
+    <li><strong>The telemetry is simulated.</strong> Not gNMI/OpenConfig or
+      SNMP from real hardware — a caricature shaped like the metrics an OLT
+      exports.</li>
+    <li><strong>The compression figures are measured on this generated
+      data,</strong> not a public dataset. Real hardware and metric mixes
+      compress differently.</li>
+  </ul>
+  <p class="muted">
+    The motivation was a network specialist opening at Sinal in Silkeborg,
+    which names streaming telemetry and time-series databases directly. I have
+    not operated a Service Provider network; this is the storage-engine and
+    telemetry engineering such a team depends on, built where it can be
+    inspected.
+  </p>
+
+  <div class="readmore">
+    <a class="demo" href="../../a15-telemetry-store/index.html">Open the demo</a>
+    <a class="writeup" href="../../a15-telemetry-store/README.md">Read the README</a>
+    <a class="writeup" href="../index.html">Back to all fourteen projects</a>
+  </div>
+</article>
+
+<footer class="page">Carl-Emil Heiselberg Andersen · Aarhus, Denmark</footer>
+
+</div>
+</body>
+</html>

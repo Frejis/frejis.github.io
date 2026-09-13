@@ -1,0 +1,166 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Integration Trace — a health-message pipeline you can break and debug</title>
+<link rel="stylesheet" href="../shared/theme.css">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="wrap">
+
+<header class="page">
+  <p class="eyebrow">Portfolio demo · A14</p>
+  <h1>Integration Trace</h1>
+  <p class="lede">
+    A clinical message — the kind a lab result travels in between hospital
+    systems — moving through a seven-stage pipeline: received, parsed,
+    validated, converted between formats, enriched, routed and delivered.
+    Break it a specific way and watch exactly where and why it stops.
+  </p>
+  <p class="note">
+    Every patient name, identifier and value on this page is invented for
+    the demo. The "CPR" numbers are shaped like a real Danish CPR number but
+    use a placeholder sequence no real person carries — see the CPR note
+    below the message editor.
+  </p>
+</header>
+
+<!-- ==================================================== 1. trace ========== -->
+<section class="panel" id="trace-section">
+  <h2>1 · The trace — where a message went, and where it stopped</h2>
+  <p class="muted">
+    Green: the stage passed. Red: the stage rejected the message, and this is
+    where it stopped. Grey: the message never reached that stage. Click any
+    box to see exactly what it checked and what it saw.
+  </p>
+  <div id="trace-strip" class="trace-strip" role="list" aria-label="Pipeline trace"></div>
+  <div id="trace-detail" class="trace-detail"></div>
+  <div id="trace-verdict" class="row"></div>
+</section>
+
+<!-- ==================================================== 2. editor + faults = -->
+<section class="panel" id="editor-section">
+  <div class="spread">
+    <div>
+      <h2>2 · The message editor</h2>
+      <p class="muted">
+        Edit the raw message directly, or click a fault button to inject a
+        specific, realistic problem. Each one fails at a different stage —
+        watch the trace above light up somewhere new every time.
+      </p>
+    </div>
+  </div>
+
+  <div class="row fault-row">
+    <button type="button" class="fault-btn" data-fault="missingSegment">Missing segment</button>
+    <button type="button" class="fault-btn" data-fault="malformedIdentifier">Malformed patient id</button>
+    <button type="button" class="fault-btn" data-fault="unknownCode">Unknown code</button>
+    <button type="button" class="fault-btn" data-fault="valueOutOfRange">Value out of range</button>
+    <button type="button" class="fault-btn" data-fault="duplicate">Duplicate control id</button>
+    <button type="button" class="fault-btn" data-fault="downSystem">Downstream system down</button>
+    <button type="button" id="reset-message">Reset to a valid message</button>
+  </div>
+
+  <textarea id="hl7-editor" class="mono" rows="6" spellcheck="false"></textarea>
+  <div class="row">
+    <button type="button" id="run-message" class="primary">Run this message through the pipeline</button>
+    <span class="faint">Runs automatically as you type, too.</span>
+  </div>
+
+  <p class="faint" id="cpr-note">
+    CPR shape check: exactly 10 digits with a calendar-plausible date in the
+    first six. The real modulus-11 check digit was formally abolished for
+    CPR numbers issued from 2007 onward, so this demo only checks shape, not
+    validity — see the README.
+  </p>
+</section>
+
+<!-- ==================================================== 3. hl7 vs fhir ===== -->
+<section class="panel" id="shapes-section">
+  <h2>3 · The same fact, two shapes</h2>
+  <p class="muted">
+    HL7 v2 is the pipe-delimited format most Danish hospital integration
+    still runs on. FHIR is the newer JSON standard many systems are moving
+    towards. This is the same clinical fact converted between the two —
+    visible here, not just asserted in a test.
+  </p>
+  <div class="grid two shapes-grid">
+    <div>
+      <p class="faint">HL7 v2 (pipe-delimited)</p>
+      <pre id="hl7-view" class="mono shape-view"></pre>
+    </div>
+    <div>
+      <p class="faint">FHIR (JSON)</p>
+      <pre id="fhir-view" class="mono shape-view"></pre>
+    </div>
+  </div>
+  <p class="faint" id="lossy-note"></p>
+</section>
+
+<!-- ==================================================== 4. dead-letter ==== -->
+<section class="panel" id="dlq-section">
+  <div class="spread">
+    <div>
+      <h2>4 · Dead-letter queue</h2>
+      <p class="muted">
+        Every message that fails ends up here with its full trace attached.
+        Fix the underlying problem and replay it — a successful replay
+        clears the entry; the same mistake again leaves it queued.
+      </p>
+    </div>
+    <span class="tag" id="dlq-count"></span>
+  </div>
+  <div id="dlq-list" class="dlq-list"></div>
+</section>
+
+<!-- ==================================================== 5. throughput ===== -->
+<section class="panel" id="throughput-section">
+  <h2>5 · A throughput run</h2>
+  <p class="muted">
+    Push many messages through the pipeline at once with a chosen fault mix,
+    and see exactly how many made it and where the rest died. The team this
+    demo targets handles roughly 80,000 such messages a day; this in-browser
+    run is a toy by comparison — see "what this is not" in the README — but
+    the accounting principle is the same one that matters in production: every
+    message ends in exactly one terminal state, and the counts must add up.
+  </p>
+
+  <div class="grid two controls-grid">
+    <div>
+      <label for="batch-count">Messages to run</label>
+      <input type="range" id="batch-count" min="100" max="20000" step="100" value="3000">
+      <p class="faint" id="batch-count-value"></p>
+
+      <label for="batch-fault-rate">Fault rate (share of messages carrying an injected fault)</label>
+      <input type="range" id="batch-fault-rate" min="0" max="90" value="35">
+      <p class="faint" id="batch-fault-rate-value"></p>
+
+      <label for="batch-deliver-fail">Downstream transient failure rate</label>
+      <input type="range" id="batch-deliver-fail" min="0" max="30" value="2">
+      <p class="faint" id="batch-deliver-fail-value"></p>
+    </div>
+    <div>
+      <div class="row">
+        <button type="button" id="batch-run" class="primary">Run the batch</button>
+      </div>
+      <div id="batch-stats" class="stat-strip"></div>
+      <p class="faint" id="batch-throughput"></p>
+      <p class="faint" id="batch-scale-note"></p>
+    </div>
+  </div>
+
+  <canvas id="batch-canvas" width="1102" height="360"></canvas>
+</section>
+
+<footer class="page">
+  Integration Trace — a portfolio demo. See the README for the HL7 v2
+  subset, what the HL7↔FHIR transform deliberately loses, and what this is
+  not.
+</footer>
+
+</div>
+<script type="module" src="app.js"></script>
+</body>
+</html>

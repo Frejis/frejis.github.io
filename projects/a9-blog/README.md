@@ -1,6 +1,6 @@
 # Portfolio hub and writeups
 
-The front page for the other twelve projects, plus a writeup for each one
+The front page for the other fourteen projects, plus a writeup for each one
 explaining what it does, how it works and what it deliberately leaves out.
 
 **[▶ Open the live demo](./index.html)**

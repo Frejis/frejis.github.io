@@ -1,0 +1,182 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Integration Trace — a message either arrived or it died somewhere, and you should be able to point at where</title>
+<link rel="stylesheet" href="../../shared/theme.css">
+<link rel="stylesheet" href="../style.css">
+</head>
+<body>
+<div class="wrap">
+
+<nav class="post-nav">
+  <a href="../index.html">← All fourteen projects</a>
+  <span class="faint">A14 · Integration Trace</span>
+</nav>
+
+<article class="post narrow">
+  <header class="page">
+    <p class="eyebrow">Writeup · A14</p>
+    <h1>A message either arrived or it died somewhere, and you should be able to point at where</h1>
+    <div class="meta">
+      <span>8 minute read</span>
+      <span>HL7 v2 · FHIR · idempotency · pipelines</span>
+    </div>
+    <p class="lede" style="margin-top:1rem">
+      Clinical integration work is mostly answering one question under time
+      pressure: this lab result did not show up, why not. A pipeline that
+      cannot answer it precisely is a pipeline you debug by reading logs
+      sideways.
+    </p>
+  </header>
+
+  <p><a class="demo" href="../../a14-health-integration/index.html">Open the demo</a></p>
+
+  <h2><span class="step">1</span>The problem</h2>
+  <p>
+    Hospital systems talk to each other in formats older than most of the
+    software around them, and they talk constantly. The team behind MidtEPJ in
+    Region Midtjylland moves on the order of 80,000 messages a day between
+    systems and reports around 150,000 registrations a day onward to national
+    registries, for a record more than 30,000 staff use. At that volume the
+    interesting question is never whether the happy path works, but what
+    happens to the fraction that does not.
+  </p>
+  <p>
+    A message can die of many different things: text that is not a valid
+    segment, a patient identifier of the wrong shape, a lab code nobody
+    mapped, a value no human body could produce, the same message arriving
+    twice, a receiving system that is down. A pipeline reporting all six as
+    "error" has thrown away the only information that makes them actionable,
+    and if the stages are sloppily assigned, two faults surface at the same
+    place and the report lies about which one happened.
+  </p>
+
+  <h2><span class="step">2</span>What I built</h2>
+  <p>
+    A lab result moving through seven stages — receive, parse, validate,
+    transform, enrich, route, deliver — with the trace drawn across the top of
+    the page as seven boxes: green for a stage that passed, red for the one
+    that rejected, grey for the stages that never ran. Click a box for what it
+    checked and concluded.
+  </p>
+  <p>
+    Six fault buttons inject a specific, realistic problem into a valid
+    message, each failing at a different stage, so the strip lights up
+    somewhere new every time. Rejected messages land in a dead-letter panel
+    where you can edit the text and replay it: fix the real problem and it
+    clears, repeat the mistake and it stays queued. A throughput run pushes
+    thousands of messages through with a configurable fault mix and accounts
+    for every one — delivered, duplicate, or rejected at a named stage — with
+    the counts summing exactly to the total.
+  </p>
+
+  <h2><span class="step">3</span>How it works</h2>
+  <p>
+    The wire format is a subset of HL7 v2: four pipe-delimited segment types,
+    <code class="inline">MSH</code>, <code class="inline">PID</code>,
+    <code class="inline">OBR</code> and <code class="inline">OBX</code>, enough
+    to carry one lab result end to end.
+    <code class="inline">MSH</code> has a well-known quirk the parser handles
+    explicitly: the <code class="inline">|</code> immediately after
+    <code class="inline">MSH</code> <em>is</em> field 1, the field separator
+    declaring itself, so every subsequent field in that segment sits one
+    position off relative to every other segment type.
+    <code class="inline">field()</code> in
+    <code class="inline">messages.js</code> absorbs that rather than making
+    each caller remember it. I did not get this right first time; it showed up
+    as a diff view confidently labelling the wrong MSH field numbers.
+  </p>
+  <p>
+    The transform stage converts that HL7 into FHIR-style
+    <code class="inline">Patient</code> and
+    <code class="inline">Observation</code> resources, and back. The round trip
+    is deliberately lossy in exactly eight fields, all routing or bookkeeping
+    metadata: which application and facility sent and received the message
+    (<code class="inline">MSH-3..6</code>), the order system's own internal ids
+    (<code class="inline">OBR-2/3</code>), and the free-text reference range
+    and abnormal flag on the result (<code class="inline">OBX-7/8</code>),
+    which this FHIR subset has no unstructured-text equivalent for. Every
+    clinically meaningful field — identity, name, birth date, sex, the
+    observation code, its value, unit, status and timing — round-trips
+    exactly, and the test proves it by diffing the original against a full
+    HL7 → FHIR → HL7 trip and asserting the diff is precisely those eight
+    fields rather than merely small.
+  </p>
+  <p>
+    The patient identifier check is deliberately shape-only: ten digits with a
+    calendar-plausible <code class="inline">DDMMYY</code> in the first six.
+    Danish CPR numbers historically carried a modulus-11 check digit, but that
+    rule was abolished for numbers issued from 2007 onward, so a modulus check
+    here would reject real people. The page says so next to the editor, not
+    only in the README.
+  </p>
+  <p>
+    Duplicate detection sits at <code class="inline">route</code>, not
+    <code class="inline">deliver</code>: each message carries a control id, and
+    a ledger of delivered ids is consulted ahead of the send rather than after
+    it, an Idempotent-Consumer-style check. The test asserts the delivered
+    count directly instead of trusting that the word "duplicate" turned up in
+    a log.
+  </p>
+
+  <h2><span class="step">4</span>What was hard</h2>
+  <p>
+    Not the parsing. Pipe-delimited text is simple. The hard part was making
+    each injected fault land on exactly one named stage and no other, which is
+    the only thing that makes the trace view worth looking at. The
+    load-bearing test asserts, for each fault, that every stage before the
+    expected one passed and nothing after the failing stage ran at all. It
+    caught two real bugs before any of this shipped.
+  </p>
+  <p>
+    Passing it meant deciding which stage owns which check, and there was no
+    single right assignment. The value-range check lives in
+    <code class="inline">transform</code>, examining the number just before it
+    becomes a FHIR <code class="inline">valueQuantity</code>, rather than in
+    <code class="inline">validate</code> beside the identifier check — partly
+    a defensible reading of the boundary between a value that is not a number
+    and one that is not physiologically possible, partly so two faults do not
+    collide on the same box. The source says so in a comment instead of
+    pretending the choice was forced.
+  </p>
+
+  <h2><span class="step">5</span>What it is not</h2>
+  <ul>
+    <li><strong>Not a real integration platform.</strong> No broker, no
+      queueing middleware, no persistence beyond an in-memory map, and no
+      authentication, audit logging or consent model — all of which a real
+      clinical integration must have.</li>
+    <li><strong>The HL7 v2 and FHIR support is a small subset.</strong> Four
+      segment types and one resource pair. Real interfaces carry dozens of
+      message types; real FHIR servers implement dozens of resources with full
+      terminology binding.</li>
+    <li><strong>All patient data is synthetic.</strong> Every name, identifier
+      and result value is invented, and the CPR-shaped identifiers use an
+      obvious placeholder sequence.</li>
+    <li><strong>Nothing real is contacted.</strong> The terminology table, the
+      routing table and the "downstream system" are small hand-written objects
+      in <code class="inline">pipeline.js</code>.</li>
+    <li><strong>The throughput run is accounting, not a load test.</strong> It
+      measures pure JavaScript in one tab with no I/O, and says nothing about
+      what a real engine sustains across real networks.</li>
+  </ul>
+  <p class="muted">
+    I have not worked in healthcare integration. This is the machinery as I
+    understand it from the formats and the patterns, built so the parts I
+    claim to understand can be checked.
+  </p>
+
+  <div class="readmore">
+    <a class="demo" href="../../a14-health-integration/index.html">Open the demo</a>
+    <a class="writeup" href="../../a14-health-integration/README.md">Read the README</a>
+    <a class="writeup" href="../index.html">Back to all fourteen projects</a>
+  </div>
+</article>
+
+<footer class="page">Carl-Emil Heiselberg Andersen · Aarhus, Denmark</footer>
+
+</div>
+</body>
+</html>

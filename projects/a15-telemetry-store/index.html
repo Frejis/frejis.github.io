@@ -1,0 +1,172 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Telemetry Store — one bit per timestamp, measured live</title>
+<link rel="stylesheet" href="../shared/theme.css">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="wrap">
+
+<header class="page">
+  <p class="eyebrow">A15 · time-series store &amp; streaming telemetry</p>
+  <h1>A time-series database for streaming network telemetry</h1>
+  <p class="lede">
+    A fibre access network reports rx/tx counters, optical light level and
+    CRC errors from every port, once every few seconds, forever. Stored
+    naively that is 16 bytes a sample. This page streams generated telemetry
+    through a real Gorilla-style compressor, an append-only store with
+    label queries and downsampling, and a rate calculation that survives a
+    device reboot — and reports what it actually measured, live.
+  </p>
+</header>
+
+<!-- ------------------------------------------------ headline compression panel -->
+<section>
+  <div class="spread">
+    <h2>The headline: bytes stored versus bytes a naive format would use</h2>
+    <span class="tag" id="compression-tag">not run yet</span>
+  </div>
+  <div class="panel">
+    <p class="muted" style="margin-top:0">
+      A naive format spends 8 bytes on the timestamp and 8 on the value —
+      16 bytes a sample, whether you send it as a packed binary record or
+      (worse) JSON. <a href="https://vldb.org/pvldb/vol8/p1816-teller.pdf" target="_blank" rel="noopener">Gorilla</a>
+      (Pelkonen et al., Facebook, VLDB 2015 — the scheme behind Prometheus's
+      and InfluxDB's storage engines) stores the delta-of-delta of
+      timestamps and the XOR of consecutive values instead, both in a
+      variable-length bit code. Press "stream telemetry" below to generate a
+      simulated network and measure the real result, not the paper's.
+    </p>
+    <div class="row">
+      <button class="primary" id="stream-btn">Stream telemetry &amp; measure compression</button>
+      <label for="seed-input" style="margin:0">Seed</label>
+      <input type="number" id="seed-input" min="0" step="1" value="7" style="width:6rem">
+      <span class="faint" id="stream-status">preloaded with one run — press the button to reproduce it live</span>
+    </div>
+    <div class="grid three" style="margin-top:1rem">
+      <div class="stat"><span class="value" id="stat-bytes-per-sample">—</span><span class="label">bytes / sample (measured)</span></div>
+      <div class="stat"><span class="value" id="stat-bits-per-sample">—</span><span class="label">bits / sample (measured)</span></div>
+      <div class="stat"><span class="value" id="stat-ratio">—</span><span class="label">of naive 16 B/sample</span></div>
+    </div>
+    <div class="grid two" style="margin-top:1rem">
+      <div class="breakdown-box">
+        <h3>Timestamps</h3>
+        <p class="faint" id="ts-breakdown">—</p>
+        <div class="bar-track"><div class="bar-fill good" id="ts-bar"></div></div>
+      </div>
+      <div class="breakdown-box">
+        <h3>Values</h3>
+        <p class="faint" id="val-breakdown">—</p>
+        <div class="bar-track"><div class="bar-fill accent" id="val-bar"></div></div>
+      </div>
+    </div>
+    <p class="faint" id="compression-note" style="margin-top:.75rem">
+      A million measurements a day per port, stored in a fraction of the space — and every one of them still answerable by a range query below.
+    </p>
+  </div>
+</section>
+
+<!-- ------------------------------------------------ live charts -->
+<section>
+  <div class="spread">
+    <h2>Live streaming charts</h2>
+    <span class="faint" id="chart-window-note">—</span>
+  </div>
+  <div class="panel">
+    <div class="row">
+      <label for="window-select" style="margin:0">Time window</label>
+      <select id="window-select" style="width:auto">
+        <option value="600000">10 minutes (raw points)</option>
+        <option value="3600000" selected>1 hour</option>
+        <option value="21600000">6 hours (downsampled)</option>
+        <option value="86400000">24 hours (downsampled)</option>
+      </select>
+      <button id="advance-btn">Advance the stream by 50 samples</button>
+      <span class="faint" id="advance-status">stream preloaded and running</span>
+    </div>
+    <div class="chart-grid">
+      <div>
+        <h3>rx throughput — <span id="chart-node-label" class="mono">aar-olt-01/1/1/1</span></h3>
+        <canvas id="chart-throughput"></canvas>
+      </div>
+      <div>
+        <h3>optical light level (dBm)</h3>
+        <canvas id="chart-light"></canvas>
+      </div>
+      <div>
+        <h3>CRC errors (cumulative)</h3>
+        <canvas id="chart-crc"></canvas>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ------------------------------------------------ fault injection -->
+<section>
+  <h2>Fault injection — watch the detector and the rate calculation react</h2>
+  <div class="panel">
+    <p class="muted" style="margin-top:0">
+      Real interface counters wrap or reset when a device reboots. A naive
+      <code class="inline">(v[i] - v[i-1]) / dt</code> across that transition
+      produces a huge negative rate — nonsense a network engineer will
+      recognise instantly. This page computes both, side by side, so the bug
+      and the fix are both visible.
+    </p>
+    <div class="row">
+      <button id="fault-degrade-btn">Degrade optical level on port 1</button>
+      <button id="fault-crc-btn">Inject a CRC error burst on port 2</button>
+      <button id="fault-reboot-btn">Reboot the node (counter reset)</button>
+      <button id="fault-reset-btn">Reset simulation</button>
+    </div>
+    <p class="faint" id="fault-status" style="margin-top:.6rem">No faults injected yet.</p>
+    <div class="grid two" style="margin-top:1rem">
+      <div>
+        <h3>Rate across the reset — reset-aware (correct)</h3>
+        <canvas id="chart-rate-fixed"></canvas>
+      </div>
+      <div>
+        <h3>Rate across the reset — naive (the bug)</h3>
+        <canvas id="chart-rate-naive"></canvas>
+      </div>
+    </div>
+    <p class="faint" id="anomaly-status" style="margin-top:.75rem">Anomaly detector: no degradation flagged yet.</p>
+  </div>
+</section>
+
+<!-- ------------------------------------------------ query panel -->
+<section>
+  <h2>Query panel — it is a database, not an array</h2>
+  <div class="panel">
+    <p class="muted" style="margin-top:0">
+      Series are identified by a metric name plus labels, e.g.
+      <code class="inline">rx_bytes{node="aar-olt-01", port="1/1/2"}</code>.
+      Enter a matcher below — exact match, a wildcard fragment, or a negative
+      match — and see which series it selects.
+    </p>
+    <div class="row">
+      <label for="query-metric" style="margin:0">metric</label>
+      <input type="text" id="query-metric" value="rx_bytes" style="width:9rem">
+      <label for="query-node" style="margin:0">node</label>
+      <input type="text" id="query-node" value="*olt-01" placeholder="exact, !=value, or *fragment" style="width:9rem">
+      <label for="query-port" style="margin:0">port</label>
+      <input type="text" id="query-port" value="" placeholder="exact, !=value, or *fragment" style="width:9rem">
+      <button id="query-btn">Run query</button>
+    </div>
+    <div id="query-results" class="query-results"></div>
+  </div>
+</section>
+
+<footer class="page">
+  Telemetry Store. Gorilla-style bit-packed compression, an append-only
+  time-series store with label matching and downsampling, a seeded fibre
+  network telemetry generator, and a rolling-MAD anomaly detector are plain
+  ES modules with no dependencies; see the README for what this is not.
+</footer>
+
+</div>
+<script type="module" src="app.js"></script>
+</body>
+</html>

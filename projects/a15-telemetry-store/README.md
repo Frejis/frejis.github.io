@@ -1,0 +1,135 @@
+# Telemetry Store
+
+A time-series database for streaming network telemetry: a real Gorilla-style
+compressor, an append-only store with label queries and downsampling, a rate
+calculation that survives a counter reset, and a threshold anomaly detector
+— all measured live against a simulated fibre access network.
+
+**[▶ Open the live demo](./index.html)**
+
+## What you are looking at
+
+A simulated fleet of OLTs, each with several ports, streaming rx/tx byte
+counters, optical light level, temperature and CRC error counts once every
+30 seconds, forever. The headline panel streams a larger version of that
+fleet through a from-scratch implementation of Facebook's Gorilla
+compression scheme and reports the real measured result — bytes per sample,
+bits per sample, and what fraction of timestamps and values collapsed to a
+single bit — never a number copied from the paper. Below it: live streaming
+charts with a time-window selector that demonstrates downsampling, a fault
+injection panel (degrade a port's optics, burst its CRC errors, reboot a
+node), and a label-matcher query panel that makes "this is a database, not
+an array" concrete.
+
+## Why this was hard
+
+- **Gorilla's two encodings, done exactly, not approximately.** Delta-of-delta
+  timestamp encoding needs a signed variable-length bit ladder (1 bit for
+  no change, then progressively wider escape codes) with two's-complement
+  sign handling done in raw bits, not JavaScript's 32-bit bitwise operators
+  — a raw millisecond timestamp needs about 41 bits and a float64's bit
+  pattern needs all 64, so `BitWriter`/`BitReader` are built on `BigInt`
+  throughout. XOR value compression needs the leading/trailing zero-count
+  optimisation from the paper (reusing the previous block's window when it
+  still covers the current XOR) to get anywhere near the paper's ratios —
+  without it, every changed value pays for a fresh leading/trailing count
+  it usually did not need to.
+- **Proving the "one bit per timestamp" claim rather than asserting it.**
+  `compress.test.js` builds a perfectly regular series and checks the
+  *actual encoded bit length* against hand-computed arithmetic (header +
+  first delta + one bit per remaining sample) — not just "it round-trips",
+  which would pass even if every timestamp cost 40 bits.
+- **Counter reset handling is the genuine operational bug this project
+  exists to demonstrate.** A device reboot makes an interface counter drop
+  instead of increasing; `(v[i] - v[i-1]) / dt` across that transition
+  produces an enormous negative rate. `store.test.js` builds that exact
+  scenario, proves the naive calculation produces the negative spike, and
+  proves the reset-aware version (treat a drop as "counter restarted near
+  zero", not "traffic went massively negative") stays non-negative and
+  correct on both sides of the reset. The live demo puts the two rate
+  charts side by side after you press "Reboot the node".
+- **Realistic-enough data for the compression numbers to mean something.**
+  A pure random walk barely compresses at all under XOR encoding; real
+  telemetry compresses well because real sensors report at a fixed
+  resolution (an optical power meter to 0.1dB) and real counters accumulate
+  in fixed-size steps, not full float64 precision every tick. The generator
+  quantises accordingly — not to flatter the compression ratio, but because
+  that is what real hardware actually reports.
+- **The anomaly detector had to not cry wolf — and then it had to actually
+  catch the fault it exists for.** A first version flagged dozens of points
+  on a perfectly flat, quantised signal, because a rolling window of
+  identical values makes the median absolute deviation exactly zero and any
+  wobble at all then looks infinitely far away. `minDeviation` floors the
+  detector's scale at the sensor's own quantisation step. But a rolling
+  window alone has the opposite failure on a *gradual* degradation: each new
+  point sits close to the median of the points just before it, so a light
+  level sliding steadily toward the loss-of-signal floor never looks
+  anomalous to a purely local comparison, even once it is absurd. The fix
+  adds a second score against a fixed baseline established from the
+  earliest points in the series, and flags on whichever score is higher.
+  `store.test.js` checks all three directions: it must fire on a short sharp
+  degradation, it must fire on a slow sustained one that a rolling window
+  alone would miss, and it must not fire on the clean baseline that produced
+  the crying-wolf bug above.
+
+## Run it
+
+Open `index.html` in a browser — no build step, no dependencies, no server
+needed. Every panel is preloaded with generated data so there is something
+to look at, and to poke at, immediately.
+
+Tests, from the repository root:
+
+```
+node --test "projects/a15-telemetry-store/*.test.js"
+```
+
+(passing a bare directory to `--test` is rejected by Node 24 on Windows; the
+quoted wildcard above works — an unquoted `*` gets expanded by cmd.exe
+itself before node ever sees it.)
+
+The suite covers: `BitWriter`/`BitReader` round-tripping at non-aligned
+widths, the Gorilla codec round-tripping exactly for a regular series, an
+irregular series, constant values, negatives and zero, `Float64` edge
+values, a long random series, a single-point series and an empty series,
+the one-bit-per-timestamp claim checked against exact arithmetic, one-bit
+XOR encoding for a repeated value, compressed size materially beating the
+naive 16-byte baseline on realistic generated data, label matching
+(exact/wildcard/negative) selecting exactly the right series, downsampled
+buckets checked against a hand-computed example, the counter-reset rate
+bug proven to exist in the naive calculation and proven fixed in the
+reset-aware one, the anomaly detector firing on an injected degradation and
+staying quiet on clean data, and the seeded generator being deterministic.
+
+## What this is not
+
+- **Not a production time-series database.** No durability, no write-ahead
+  log, no compaction, no clustering or replication, no persistence at all —
+  everything lives in memory for the lifetime of the browser tab. This is
+  the compression and query *logic* a real TSDB is built around, in
+  isolation, so both are legible.
+- **The anomaly detector is a threshold heuristic, not machine learning.**
+  Rolling median plus a scaled median absolute deviation, chosen because it
+  is robust to the anomalies it is trying to detect (a mean and standard
+  deviation are themselves dragged around by the outliers you are looking
+  for) and because a reader can recompute it by hand on a handful of
+  numbers. It has no concept of seasonality, trend, or multiple simultaneous
+  fault modes.
+- **The telemetry is simulated, not gNMI/OpenConfig or SNMP from real
+  hardware.** The generator's counters, noise and fault injection are a
+  plausible caricature of a fibre access network — shaped like the metrics
+  a real OLT or switch exports — not a capture of an actual device or a
+  streaming-telemetry client speaking a real protocol to one. Optical light
+  level is bounded at a -30dBm loss-of-signal floor (real PON/GPON receivers
+  lose lock well before that); the "degrade optical level" fault sags
+  toward that floor and then holds, it does not ramp indefinitely into
+  physically impossible readings.
+- **The author has not operated a carrier-scale network.** This project
+  demonstrates the storage-engine and streaming-telemetry engineering a
+  network operations team relies on; it does not claim hands-on experience
+  running a Service Provider network at that scale.
+- **Compression numbers are measured on this project's own generated data**,
+  not a public telemetry dataset — real hardware, sampling intervals and
+  metric mixes will compress differently. The 1-bit-timestamp and
+  bytes-per-sample figures on the page are whatever the button just
+  measured, live, not a number typed once here and left unchecked.

@@ -1,0 +1,125 @@
+/* Integration Trace — project-specific styling only. Shared look: theme.css. */
+
+.note {
+  margin-top: 1rem;
+}
+
+/* ---------- trace strip ---------- */
+
+.trace-strip {
+  display: flex;
+  align-items: stretch;
+  flex-wrap: wrap;
+  gap: .25rem;
+  margin: 1rem 0;
+  min-width: 0;
+}
+.trace-arrow {
+  align-self: center;
+  color: var(--text-faint);
+  font-size: 1.1rem;
+}
+.trace-box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: .2rem;
+  min-width: 5.4rem;
+  padding: .6rem .4rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-strong);
+  background: var(--bg-inset);
+  color: var(--text-dim);
+  cursor: pointer;
+  font: inherit;
+}
+.trace-box:hover { border-color: var(--accent); }
+.trace-box .n {
+  font-family: var(--mono);
+  font-size: .68rem;
+  color: var(--text-faint);
+}
+.trace-box .l {
+  font-size: .82rem;
+  font-weight: 600;
+}
+.trace-box.pass { border-color: var(--good); background: color-mix(in srgb, var(--good) 12%, var(--bg-inset)); color: var(--text); }
+.trace-box.pass .n { color: var(--good); }
+.trace-box.fail { border-color: var(--bad); background: color-mix(in srgb, var(--bad) 16%, var(--bg-inset)); color: var(--text); }
+.trace-box.fail .n { color: var(--bad); }
+.trace-box.unreached { opacity: .55; }
+
+.trace-detail {
+  background: var(--bg-inset);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: .9rem 1rem;
+  margin-bottom: .75rem;
+}
+.trace-detail h3 { display: flex; align-items: center; gap: .6rem; margin-bottom: .4rem; }
+
+#trace-verdict { align-items: center; }
+
+/* ---------- editor + faults ---------- */
+
+.fault-row { margin-bottom: .9rem; }
+
+#hl7-editor {
+  width: 100%;
+  min-height: 8rem;
+  white-space: pre;
+  overflow-x: auto;
+  font-size: .82rem;
+  margin-bottom: .75rem;
+}
+
+#cpr-note { margin-top: .9rem; }
+
+/* ---------- shapes ---------- */
+
+/* min-width: 0 stops the pre's white-space: pre from inflating the grid
+   track and forcing horizontal page overflow — same trap SPEC.md calls out. */
+.shapes-grid { min-width: 0; }
+.shapes-grid > div { min-width: 0; }
+.shape-view {
+  max-height: 320px;
+  overflow: auto;
+  white-space: pre;
+  font-size: .78rem;
+}
+
+/* ---------- dead-letter queue ---------- */
+
+.dlq-list { display: flex; flex-direction: column; gap: .8rem; }
+.dlq-entry {
+  background: var(--bg-inset);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: .8rem;
+  min-width: 0;
+}
+.dlq-editor {
+  width: 100%;
+  white-space: pre;
+  overflow-x: auto;
+  font-size: .78rem;
+  margin: .5rem 0;
+}
+
+/* ---------- throughput ---------- */
+
+.controls-grid label:not(:first-child) { margin-top: .9rem; }
+.controls-grid .faint { margin: .25rem 0 0; }
+
+#batch-canvas {
+  width: 100%;
+  background: var(--bg-inset);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  margin-top: 1rem;
+}
+
+@media (max-width: 900px) {
+  .trace-box { min-width: 4.4rem; font-size: .78rem; }
+}
