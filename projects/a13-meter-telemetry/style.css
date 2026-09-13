@@ -1,22 +1,36 @@
 /* Meter Telemetry — project-specific styling only. Shared look: theme.css. */
 
-/* The byte map colours seven fields at once, two more than the shared palette
-   has distinct hues for. These two make up the difference; they are defined
-   per palette so they switch with everything else, and they are deliberately
-   far from accent/good/warn/bad/alt so the legend stays readable. */
+/* The byte map colours eight fields at once, more distinct hues than the
+   shared palette carries. These make up the difference; they are defined per
+   palette so they switch with everything else, and their hues are chosen to
+   sit in the gaps left by accent/good/warn/bad so that no two fields read as
+   the same colour at bit-chip size - which is easy to miss, because colours
+   far enough apart to measure as different can still look alike at 8px. */
 :root,
 :root[data-theme="dark"] {
-  --field-teal: #2ea8a0;
-  --field-magenta: #e072bf;
+  --field-teal: #35bcd4;
+  --field-magenta: #ef4696;
+  --field-crc: var(--text-faint);
+  --field-violet: #e084fb;
 }
 :root[data-theme="light"] {
-  --field-teal: #0f766e;
-  --field-magenta: #a3308a;
+  --field-teal: #00777a;
+  --field-magenta: #b7246e;
+  /* The CRC field is the only neutral in the byte map. On a light background
+   * the shared --text-faint sat too close to the teal, so it gets a darker
+   * grey of its own here. */
+  --field-crc: #3c4856;
+  /* The shared --alt violet sits only 20 degrees from --accent blue, which at
+   * 8px chip size reads as one colour. This one clears both the blue and the
+   * status-flag magenta. */
+  --field-violet: #7c418e;
 }
 @media (prefers-color-scheme: light) {
   :root:not([data-theme]) {
-    --field-teal: #0f766e;
-    --field-magenta: #a3308a;
+    --field-teal: #00777a;
+    --field-magenta: #b7246e;
+    --field-crc: #3c4856;
+    --field-violet: #7c418e;
   }
 }
 

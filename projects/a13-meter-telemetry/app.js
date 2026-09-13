@@ -39,7 +39,7 @@ const cssVar = (name) => getComputedStyle(document.body).getPropertyValue(name).
 // hues than the shared palette carries, so two come from style.css, which
 // defines them under both themes.
 const FIELD_VARS = [
-  "--accent", "--good", "--warn", "--alt", "--bad", "--field-teal", "--field-magenta",
+  "--accent", "--good", "--warn", "--field-violet", "--bad", "--field-teal", "--field-magenta",
 ];
 const varFor = (() => {
   const assigned = new Map();
@@ -104,7 +104,7 @@ function renderByteMap(container, fields, payloadBytes, frameBytes, onBitClick) 
       el.className = "bit" + (bitValue ? " on" : "");
       el.textContent = String(bitValue);
       el.title = `${owner ?? "pad"} · bit ${bitIndex}`;
-      el.style.setProperty("--bit-color", owner === "crc" ? "var(--text-faint)" : colorFor(owner ?? "pad"));
+      el.style.setProperty("--bit-color", owner === "crc" ? "var(--field-crc)" : colorFor(owner ?? "pad"));
       if (onBitClick) {
         el.addEventListener("click", () => onBitClick(byteIndex, bit));
       }
@@ -129,7 +129,7 @@ function renderLegend(container, fields) {
   }
   const crc = document.createElement("span");
   crc.className = "swatch";
-  crc.style.setProperty("--sw-color", "var(--text-faint)");
+  crc.style.setProperty("--sw-color", "var(--field-crc)");
   crc.textContent = "CRC-16 (16b)";
   container.appendChild(crc);
 }
