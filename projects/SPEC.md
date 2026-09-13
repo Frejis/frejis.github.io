@@ -80,6 +80,48 @@ benchmark that actually runs in the page or in a test.
   Put the precise term second, in smaller text.
 - Must work at 1280px wide and degrade sanely to mobile.
 
+## Light and dark themes (required on every page)
+
+The portfolio ships two palettes. `shared/theme.css` defines both under the
+same variable names and `shared/theme-toggle.js` injects the toggle button, so
+a page needs no markup of its own. Every page must include, after the
+stylesheet links:
+
+```html
+<script src="../shared/theme-toggle.js" defer></script>
+```
+
+(`../../shared/theme-toggle.js` from a blog post, which sits one level deeper.)
+
+Rules:
+
+1. **Never name a colour in a project.** No hex, no `rgb()`, no colour keyword
+   in a project's `style.css` or `app.js`. Use the shared variables:
+   `--bg`, `--bg-raised`, `--bg-inset`, `--border`, `--border-strong`,
+   `--text`, `--text-dim`, `--text-faint`, `--accent`, `--accent-hover`,
+   `--accent-dim`, `--on-accent`, `--good`, `--warn`, `--bad`, `--alt`.
+   A hardcoded colour is invisible in dark mode and wrong in light mode, which
+   is exactly the bug that is hardest to notice.
+
+2. **Canvas cannot inherit CSS.** Read colours with
+   `getComputedStyle(document.body).getPropertyValue("--border")` at DRAW time,
+   never from a value cached when the module loaded - a cached value keeps the
+   old palette forever.
+
+3. **Repaint on theme change.** The toggle dispatches a `themechange` event on
+   `document`. Any page that draws to a canvas must listen and redraw:
+
+   ```js
+   document.addEventListener("themechange", () => redrawEverything());
+   ```
+
+   Charts already on screen do not repaint themselves, and a dark chart on a
+   light page is the most obvious possible defect.
+
+4. **Both palettes must be legible.** A colour that reads well on near-black
+   often fails on near-white. Check text, borders, disabled controls, chart
+   gridlines and every status colour in both.
+
 ## Explaining it to a non-expert (required on every page)
 
 The reader is a hiring manager, a recruiter, or an engineer from another

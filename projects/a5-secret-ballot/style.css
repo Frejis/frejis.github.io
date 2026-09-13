@@ -37,7 +37,7 @@
 }
 .cipher-cell.expanded { max-width: none; }
 .cipher-cell.zero { color: var(--text-faint); }
-.row-corrupted { background: rgba(248, 81, 73, 0.08); }
+.row-corrupted { background: color-mix(in srgb, var(--bad) 10%, transparent); }
 
 .same-vote-grid {
   display: grid;

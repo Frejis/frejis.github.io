@@ -23,18 +23,20 @@ const target = findUniqueTarget(people);
 
 // ---------- shared canvas helpers ----------
 
-const css = getComputedStyle(document.documentElement);
-const colour = (name, fallback) => css.getPropertyValue(name).trim() || fallback;
+/* Read at draw time, never cached: a value taken once at module load keeps the
+ * palette it was born in, and every chart on the page would stay dark. */
+const colour = (name) => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
 const C = {
-  grid: colour("--border", "#262d38"),
-  axis: colour("--border-strong", "#39424f"),
-  text: colour("--text-dim", "#9aa7b4"),
-  faint: colour("--text-faint", "#6b7785"),
-  accent: colour("--accent", "#4c8dff"),
-  alt: colour("--alt", "#bc8cff"),
-  good: colour("--good", "#3fb950"),
-  warn: colour("--warn", "#d29922"),
-  bad: colour("--bad", "#f85149"),
+  get grid() { return colour("--border"); },
+  get axis() { return colour("--border-strong"); },
+  get text() { return colour("--text-dim"); },
+  get faint() { return colour("--text-faint"); },
+  get accent() { return colour("--accent"); },
+  get alt() { return colour("--alt"); },
+  get good() { return colour("--good"); },
+  get warn() { return colour("--warn"); },
+  get bad() { return colour("--bad"); },
+  get accentBand() { return colour("--accent-band"); },
 };
 
 /** Sets up a canvas for its CSS size on this display, returns a plot frame. */
@@ -250,7 +252,12 @@ function working(rows) {
     .join("");
 }
 
+// The histogram is drawn only when a histogram query has been answered, so its
+// bins are kept for the repaint; the other charts hold their own measurements.
+let histogramBins = null;
+
 function drawHistogram(bins) {
+  histogramBins = bins;
   const f = frame($("histogram-canvas"), { l: 46, r: 14, t: 14, b: 40 });
   const max = Math.max(1, ...bins.map((b) => Math.max(b.trueValue, b.noisyValue))) * 1.15;
   axes(f, { yMax: max });
@@ -451,7 +458,7 @@ function drawExplorer(epsilon) {
   // the 80% central band, so "how wrong could this be" is legible at a glance
   const b10 = q(0.1);
   const b90 = q(0.9);
-  f.ctx.fillStyle = "rgba(76, 141, 255, .1)";
+  f.ctx.fillStyle = C.accentBand;
   f.ctx.fillRect(xOf(b10), f.y0, Math.max(1, xOf(b90) - xOf(b10)), f.plotH);
 
   const bw = f.plotW / bins;
@@ -815,10 +822,12 @@ function drawAnalysis(rows) {
   f.ctx.fillText("released under DP", f.x1 - 66, f.y0 + 12);
 }
 
-function renderAnalysis() {
-  const epsilon = Number($("analysis-epsilon").value);
-  $("analysis-epsilon-value").textContent = epsilon.toFixed(2);
-  const rows = analysisRows(epsilon);
+// The analysis table/chart/sentence are a real release: re-running them spends
+// fresh noise. A repaint (theme toggle, resize) must show the SAME release, so
+// the rows computed on the genuine run are cached and redrawn from here.
+let analysisCache = null;
+
+function renderAnalysisRows(rows) {
   drawAnalysis(rows);
   const worst = rows.reduce((a, r) =>
     Math.abs(r.noisyValue - r.trueValue) > Math.abs(a.noisyValue - a.trueValue) ? r : a
@@ -838,6 +847,19 @@ function renderAnalysis() {
       </tr>`;
     })
     .join("");
+}
+
+/** The genuine, budget-spending path: a fresh release for the current epsilon. */
+function renderAnalysis() {
+  const epsilon = Number($("analysis-epsilon").value);
+  $("analysis-epsilon-value").textContent = epsilon.toFixed(2);
+  analysisCache = analysisRows(epsilon);
+  renderAnalysisRows(analysisCache);
+}
+
+/** The repaint path: redraws the release already on screen, spends nothing new. */
+function repaintAnalysis() {
+  if (analysisCache) renderAnalysisRows(analysisCache);
 }
 
 $("analysis-epsilon").addEventListener("input", renderAnalysis);
@@ -860,14 +882,22 @@ function init() {
   renderAnalysis();
 }
 
+/** Every canvas the page owns, repainted from the measurements it already has. */
+function drawAllCharts() {
+  drawExplorer(Number($("explorer-epsilon").value));
+  drawAttackCurve();
+  drawBench();
+  repaintAnalysis();
+  if (histogramBins) drawHistogram(histogramBins);
+}
+
+document.addEventListener("themechange", drawAllCharts);
+
 let resizeTimer = null;
 window.addEventListener("resize", () => {
   clearTimeout(resizeTimer);
   resizeTimer = setTimeout(() => {
-    drawExplorer(Number($("explorer-epsilon").value));
-    drawAttackCurve();
-    drawBench();
-    renderAnalysis();
+    drawAllCharts();
     if (!histogramPanel.hidden) $("run-query-btn").blur();
   }, 150);
 });

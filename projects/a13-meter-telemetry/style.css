@@ -1,5 +1,25 @@
 /* Meter Telemetry — project-specific styling only. Shared look: theme.css. */
 
+/* The byte map colours seven fields at once, two more than the shared palette
+   has distinct hues for. These two make up the difference; they are defined
+   per palette so they switch with everything else, and they are deliberately
+   far from accent/good/warn/bad/alt so the legend stays readable. */
+:root,
+:root[data-theme="dark"] {
+  --field-teal: #2ea8a0;
+  --field-magenta: #e072bf;
+}
+:root[data-theme="light"] {
+  --field-teal: #0f766e;
+  --field-magenta: #a3308a;
+}
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme]) {
+    --field-teal: #0f766e;
+    --field-magenta: #a3308a;
+  }
+}
+
 .controls-grid label:not(:first-child) { margin-top: .9rem; }
 .controls-grid .faint { margin: .25rem 0 0; }
 
@@ -42,7 +62,7 @@
   background: color-mix(in srgb, var(--bit-color) 18%, var(--bg-inset));
 }
 .bit.on {
-  color: #07101f;
+  color: var(--on-accent);
   background: var(--bit-color);
   font-weight: 600;
 }

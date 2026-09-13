@@ -366,9 +366,14 @@ function runExperiment() {
 
 const BENCH_VS = [4, 6, 8, 10, 12, 14, 16, 17, 18];
 
+// Kept so the chart can be drawn again from the same measurements when the
+// palette changes; canvas pixels do not follow a CSS variable.
+let benchRows = [];
+
 function runBenchmark() {
   el.benchBtn.disabled = true;
   const rows = [];
+  benchRows = rows;
   let i = 0;
 
   const stepOne = () => {
@@ -481,6 +486,10 @@ function drawChart(rows) {
     ctx.fillText(s.label, xs(lastRow.v) + 10, ys(lastRow[s.key]));
   }
 }
+
+document.addEventListener('themechange', () => {
+  drawChart(benchRows);
+});
 
 // go
 el.vOut.value = el.v.value;

@@ -1,6 +1,16 @@
-/* Shared portfolio theme. Do not edit from inside a project task. */
+/* Shared portfolio theme. Do not edit from inside a project task.
+ *
+ * Two palettes, one set of names. Nothing in a project should ever name a
+ * colour directly: every project reads these variables, so switching the
+ * palette switches the whole portfolio. Canvas drawing cannot inherit CSS,
+ * so charts read the same variables through getComputedStyle and repaint on
+ * the `themechange` event that shared/theme-toggle.js dispatches.
+ */
 
-:root {
+:root,
+:root[data-theme="dark"] {
+  color-scheme: dark;
+
   --bg: #0e1116;
   --bg-raised: #161b22;
   --bg-inset: #0a0d12;
@@ -9,15 +19,90 @@
 
   --text: #e6edf3;
   --text-dim: #9aa7b4;
-  --text-faint: #6b7785;
+  --text-faint: #7c8a9a; /* was #6b7785: 3.79:1 on --bg-raised, below AA */
 
   --accent: #4c8dff;
+  --accent-hover: #6ba1ff;
   --accent-dim: #1f3d70;
+  --on-accent: #07101f;
+
   --good: #3fb950;
   --warn: #d29922;
   --bad: #f85149;
   --alt: #bc8cff;
 
+  --btn-hover: #1d242e;
+  --warn-dim: #3a2d0d;
+  --shadow: 0 1px 2px rgb(0 0 0 / 0.4);
+}
+
+/* The light palette is a warm paper grey rather than pure white: full white
+ * against a dark-ink body is harsh under a bright monitor, and the raised
+ * panels need somewhere lighter to sit. Accents are darkened because a colour
+ * legible on near-black is not legible on near-white. */
+:root[data-theme="light"] {
+  color-scheme: light;
+
+  --bg: #f6f7f9;
+  --bg-raised: #ffffff;
+  --bg-inset: #eceff3;
+  --border: #dbe0e7;
+  --border-strong: #b9c2cd;
+
+  --text: #171f28;
+  --text-dim: #4d5967;
+  /* Darkened from #6d7a89 / #17803d: both fell below 4.5:1 against --bg-inset,
+   * which is the surface chart axis labels and status text actually sit on. */
+  --text-faint: #5c6875;
+
+  --accent: #0b5fd0;
+  --accent-hover: #0a52b4;
+  --accent-dim: #dce9fb;
+  --on-accent: #ffffff;
+
+  --good: #136a33;
+  --warn: #8a6100;
+  --bad: #c4262e;
+  --alt: #7540cf;
+
+  --btn-hover: #e3e8ee;
+  --warn-dim: #fdf3d7;
+  --shadow: 0 1px 2px rgb(16 24 40 / 0.06);
+}
+
+/* Respect the operating system until the reader states a preference. Once
+ * they press the toggle, data-theme is set explicitly and wins over this. */
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme]) {
+    color-scheme: light;
+
+    --bg: #f6f7f9;
+    --bg-raised: #ffffff;
+    --bg-inset: #eceff3;
+    --border: #dbe0e7;
+    --border-strong: #b9c2cd;
+
+    --text: #171f28;
+    --text-dim: #4d5967;
+    --text-faint: #5c6875;
+
+    --accent: #0b5fd0;
+    --accent-hover: #0a52b4;
+    --accent-dim: #dce9fb;
+    --on-accent: #ffffff;
+
+    --good: #136a33;
+    --warn: #8a6100;
+    --bad: #c4262e;
+    --alt: #7540cf;
+
+    --btn-hover: #e3e8ee;
+    --warn-dim: #fdf3d7;
+    --shadow: 0 1px 2px rgb(16 24 40 / 0.06);
+  }
+}
+
+:root {
   --mono: ui-monospace, "SF Mono", "Cascadia Mono", "JetBrains Mono", Menlo, Consolas, monospace;
   --sans: system-ui, -apple-system, "Segoe UI", Inter, Roboto, sans-serif;
 
@@ -28,8 +113,6 @@
 }
 
 * { box-sizing: border-box; }
-
-html { color-scheme: dark; }
 
 body {
   margin: 0;
@@ -72,6 +155,41 @@ header.page p.lede {
   color: var(--accent);
   margin: 0 0 .6rem;
 }
+
+/* ---------- theme toggle ---------- */
+/* Injected by shared/theme-toggle.js, so no page needs markup for it. */
+
+.theme-toggle {
+  position: fixed;
+  top: .9rem;
+  right: .9rem;
+  z-index: 50;
+  display: inline-flex;
+  align-items: center;
+  gap: .4rem;
+  font-family: var(--sans);
+  font-size: .78rem;
+  font-weight: 550;
+  color: var(--text-dim);
+  background: var(--bg-raised);
+  border: 1px solid var(--border-strong);
+  border-radius: 999px;
+  padding: .35rem .7rem;
+  cursor: pointer;
+  box-shadow: var(--shadow);
+  transition: color .12s, border-color .12s, background .12s;
+}
+.theme-toggle:hover {
+  color: var(--text);
+  border-color: var(--accent);
+  background: var(--btn-hover);
+}
+.theme-toggle svg { width: 14px; height: 14px; display: block; }
+@media (max-width: 640px) {
+  .theme-toggle .theme-toggle-label { display: none; }
+  .theme-toggle { padding: .4rem; }
+}
+@media print { .theme-toggle { display: none; } }
 
 /* ---------- structure ---------- */
 
@@ -122,14 +240,14 @@ button {
   cursor: pointer;
   transition: background .12s, border-color .12s;
 }
-button:hover:not(:disabled) { background: #1d242e; border-color: var(--accent); }
+button:hover:not(:disabled) { background: var(--btn-hover); border-color: var(--accent); }
 button:disabled { opacity: .4; cursor: not-allowed; }
 button.primary {
   background: var(--accent);
   border-color: var(--accent);
-  color: #07101f;
+  color: var(--on-accent);
 }
-button.primary:hover:not(:disabled) { background: #6ba1ff; }
+button.primary:hover:not(:disabled) { background: var(--accent-hover); border-color: var(--accent-hover); }
 button.danger { border-color: var(--bad); color: var(--bad); }
 
 input[type="text"], input[type="number"], input[type="password"], textarea, select {
@@ -205,10 +323,10 @@ canvas { display: block; max-width: 100%; }
   border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
   font-size: .9rem;
 }
-.note.warn { border-left-color: var(--warn); background: #3a2d0d; }
+.note.warn { border-left-color: var(--warn); background: var(--warn-dim); }
 
 a { color: var(--accent); }
-a:hover { color: #6ba1ff; }
+a:hover { color: var(--accent-hover); }
 
 footer.page {
   margin-top: 3rem;

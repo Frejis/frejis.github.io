@@ -183,12 +183,20 @@ function sleep(ms) {
 function invalidateTally(message) {
   if (lastAnnounced === null) return;
   lastAnnounced = null;
+  lastTallyData = null;
   tallyAccumulator.innerHTML = "";
   tallyStatus.textContent = message || "";
   tallyCanvas.style.display = "none";
 }
 
+// Last data drawn to each canvas, kept so a palette change can repaint them.
+// Canvas pixels do not inherit CSS, so a chart left on screen would otherwise
+// keep the colours it was drawn in.
+let lastTallyData = null;
+let lastBenchResults = null;
+
 function drawTallyChart(perOption) {
+  lastTallyData = perOption;
   tallyCanvas.style.display = "block";
   const ctx = tallyCanvas.getContext("2d");
   const w = tallyCanvas.width;
@@ -196,10 +204,10 @@ function drawTallyChart(perOption) {
   ctx.clearRect(0, 0, w, h);
 
   const styles = getComputedStyle(document.documentElement);
-  const gridColor = styles.getPropertyValue("--border").trim() || "#262d38";
-  const textColor = styles.getPropertyValue("--text-dim").trim() || "#9aa7b4";
-  const accent = styles.getPropertyValue("--accent").trim() || "#4c8dff";
-  const good = styles.getPropertyValue("--good").trim() || "#3fb950";
+  const gridColor = styles.getPropertyValue("--border").trim();
+  const textColor = styles.getPropertyValue("--text-dim").trim();
+  const accent = styles.getPropertyValue("--accent").trim();
+  const good = styles.getPropertyValue("--good").trim();
 
   const padL = 40;
   const padB = 40;
@@ -326,18 +334,19 @@ const benchCanvas = $("bench-canvas");
 const benchTableBody = $("bench-table-body");
 
 function drawBenchChart(results) {
+  lastBenchResults = results;
   const ctx = benchCanvas.getContext("2d");
   const w = benchCanvas.width;
   const h = benchCanvas.height;
   ctx.clearRect(0, 0, w, h);
 
   const styles = getComputedStyle(document.documentElement);
-  const gridColor = styles.getPropertyValue("--border").trim() || "#262d38";
-  const textColor = styles.getPropertyValue("--text-dim").trim() || "#9aa7b4";
-  const accent = styles.getPropertyValue("--accent").trim() || "#4c8dff";
-  const alt = styles.getPropertyValue("--alt").trim() || "#bc8cff";
-  const good = styles.getPropertyValue("--good").trim() || "#3fb950";
-  const warn = styles.getPropertyValue("--warn").trim() || "#d29922";
+  const gridColor = styles.getPropertyValue("--border").trim();
+  const textColor = styles.getPropertyValue("--text-dim").trim();
+  const accent = styles.getPropertyValue("--accent").trim();
+  const alt = styles.getPropertyValue("--alt").trim();
+  const good = styles.getPropertyValue("--good").trim();
+  const warn = styles.getPropertyValue("--warn").trim();
 
   const padL = 50;
   const padB = 30;
@@ -455,6 +464,11 @@ benchRunBtn.addEventListener("click", async () => {
     `${Math.round(last.encryptMs / last.addMs).toLocaleString()} times cheaper. That is why counting ` +
     `millions of encrypted ballots is a realistic amount of work, even though the encryption itself is not cheap.`;
   benchRunBtn.disabled = false;
+});
+
+document.addEventListener("themechange", () => {
+  if (lastTallyData) drawTallyChart(lastTallyData);
+  if (lastBenchResults) drawBenchChart(lastBenchResults);
 });
 
 // ---------- init ----------

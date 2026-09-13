@@ -1,5 +1,33 @@
 /* Break It Yourself — project-specific styling only. Shared look: theme.css. */
 
+/* Two washes the shared palette does not name (it has --accent-dim and
+   --warn-dim but no green or purple counterpart), in both palettes. */
+:root,
+:root[data-theme="dark"] {
+  --good-dim: #10281a;
+  --alt-dim: #2a1f3d;
+}
+:root[data-theme="light"] {
+  --good-dim: #dcf2e3;
+  --alt-dim: #ebe0fb;
+}
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme]) {
+    --good-dim: #dcf2e3;
+    --alt-dim: #ebe0fb;
+  }
+}
+
+/* The plaintext picture the ECB demo encrypts. These are DATA, not styling:
+   ECB leaks whatever repeats, and it is the flat high-contrast areas that make
+   the leak visible, so they are the same under both palettes on purpose.
+   Themed down to the page background the demonstration would show nothing. */
+:root {
+  --ecb-paper: #f2f6fa;
+  --ecb-ink: #10151c;
+  --ecb-beak: #e8a020;
+}
+
 .attack-nav {
   display: flex;
   gap: .5rem;
@@ -8,9 +36,12 @@
   position: sticky;
   top: 0;
   z-index: 5;
-  padding: .6rem 0;
+  padding: .6rem 110px .6rem 0; /* clears the fixed theme toggle at top right */
   background: var(--bg);
   border-bottom: 1px solid var(--border);
+}
+@media (max-width: 640px) {
+  .attack-nav { padding-right: 56px; } /* toggle collapses to ~32px square below this width */
 }
 .attack-nav a {
   font-family: var(--mono);
@@ -51,7 +82,7 @@
 .fix {
   margin: 1rem 0 0;
   border-left: 3px solid var(--good);
-  background: #10281a;
+  background: var(--good-dim);
   padding: .6rem .8rem;
   border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
   font-size: .88rem;
@@ -129,7 +160,7 @@
   width: 2.5rem;
   flex-shrink: 0;
 }
-.crib-hit { color: var(--alt); background: #2a1f3d; }
+.crib-hit { color: var(--alt); background: var(--alt-dim); }
 
 /* min-width lets the column shrink below the widest recovered line, so the
    sideways scroll stays inside this box instead of widening the page. */
@@ -184,7 +215,7 @@
 }
 .plaintext-out .known { color: var(--good); }
 .plaintext-out .unknown { color: var(--text-faint); }
-.plaintext-out .active { color: var(--warn); background: #3a2d0d; }
+.plaintext-out .active { color: var(--warn); background: var(--warn-dim); }
 
 .block-strip {
   display: flex;
@@ -218,8 +249,8 @@
   overflow-y: auto;
 }
 .byte-view .seg-original { color: var(--text); }
-.byte-view .seg-glue { color: var(--warn); background: #3a2d0d; }
-.byte-view .seg-suffix { color: var(--alt); background: #2a1f3d; }
+.byte-view .seg-glue { color: var(--warn); background: var(--warn-dim); }
+.byte-view .seg-suffix { color: var(--alt); background: var(--alt-dim); }
 
 .legend { display: flex; gap: .9rem; flex-wrap: wrap; font-size: .74rem; margin-top: .4rem; }
 .legend span::before {

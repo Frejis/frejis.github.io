@@ -36,6 +36,13 @@ function randomBytes(n) {
 const escapeHtml = (s) =>
   s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 
+/** Canvas cannot inherit CSS, so every draw reads the palette as it is now. */
+const colour = (name) =>
+  getComputedStyle(document.body).getPropertyValue(name).trim();
+
+/** Canvases that must be painted again when the palette changes. */
+const repaints = [];
+
 // ============================================================================
 // 1. ECB penguin
 // ============================================================================
@@ -51,10 +58,14 @@ let ecbShapeIndex = 0;
  */
 function drawSourceImage(ctx, shape) {
   const s = ECB_SIZE;
-  ctx.fillStyle = "#f2f6fa";
+  // --ecb-* are the picture's own colours and are the same in both palettes:
+  // they are the plaintext being encrypted, not styling. See style.css.
+  const paper = colour("--ecb-paper");
+  const ink = colour("--ecb-ink");
+  ctx.fillStyle = paper;
   ctx.fillRect(0, 0, s, s);
 
-  ctx.fillStyle = "#10151c";
+  ctx.fillStyle = ink;
   if (shape === "penguin") {
     // A blocky penguin: body, head, eyes, beak, feet.
     ctx.beginPath();
@@ -63,7 +74,7 @@ function drawSourceImage(ctx, shape) {
     ctx.beginPath();
     ctx.arc(s / 2, s * 0.28, s * 0.17, 0, Math.PI * 2);
     ctx.fill();
-    ctx.fillStyle = "#f2f6fa";
+    ctx.fillStyle = paper;
     ctx.beginPath();
     ctx.ellipse(s / 2, s * 0.63, s * 0.15, s * 0.24, 0, 0, Math.PI * 2);
     ctx.fill();
@@ -71,7 +82,7 @@ function drawSourceImage(ctx, shape) {
     ctx.arc(s * 0.44, s * 0.26, s * 0.035, 0, Math.PI * 2);
     ctx.arc(s * 0.56, s * 0.26, s * 0.035, 0, Math.PI * 2);
     ctx.fill();
-    ctx.fillStyle = "#e8a020";
+    ctx.fillStyle = colour("--ecb-beak");
     ctx.beginPath();
     ctx.moveTo(s * 0.5, s * 0.3);
     ctx.lineTo(s * 0.44, s * 0.37);
@@ -128,20 +139,35 @@ function setupEcb() {
 
   const plainCtx = plainCanvas.getContext("2d", { willReadFrequently: true });
 
-  const redraw = () => {
-    drawSourceImage(plainCtx, ecbShapes[ecbShapeIndex]);
+  // The two output canvases before anything has been encrypted: this frame is
+  // page furniture, so it follows the theme, unlike the picture itself.
+  let encrypted = false;
+  const drawPlaceholders = () => {
     for (const c of [ecbCanvas, cbcCanvas]) {
       const ctx = c.getContext("2d");
-      ctx.fillStyle = "#0a0d12";
+      ctx.fillStyle = colour("--bg-inset");
       ctx.fillRect(0, 0, c.width, c.height);
-      ctx.fillStyle = "#6b7785";
+      ctx.fillStyle = colour("--text-faint");
       ctx.font = "13px system-ui, sans-serif";
       ctx.textAlign = "center";
       ctx.fillText("not encrypted yet", c.width / 2, c.height / 2);
     }
+  };
+
+  const redraw = () => {
+    encrypted = false;
+    drawSourceImage(plainCtx, ecbShapes[ecbShapeIndex]);
+    drawPlaceholders();
     stats.innerHTML = "";
     status.textContent = "";
   };
+
+  // Repainting the ciphertext images would destroy them, and they are pixels
+  // of data rather than styling; only the empty-state frame needs the palette.
+  repaints.push(() => {
+    drawSourceImage(plainCtx, ecbShapes[ecbShapeIndex]);
+    if (!encrypted) drawPlaceholders();
+  });
 
   const run = async () => {
     const key = randomBytes(16);
@@ -162,6 +188,7 @@ function setupEcb() {
 
     ecbCanvas.getContext("2d").putImageData(ecbImage, 0, 0);
     cbcCanvas.getContext("2d").putImageData(cbcImage, 0, 0);
+    encrypted = true;
     progress.querySelector(".bar").style.width = "100%";
 
     // How much of the leak is measurable: count repeated 16-byte blocks in the
@@ -585,13 +612,15 @@ function setupTiming() {
 
   const secret = textToBytes(TOKEN);
   let cancelled = false;
+  let lastChart = null;
 
   const drawChart = (timings, bestIndex, found) => {
+    lastChart = [timings, bestIndex, found];
     const w = canvas.width;
     const h = canvas.height;
     const pad = { left: 44, right: 12, top: 14, bottom: 28 };
     ctx.clearRect(0, 0, w, h);
-    ctx.fillStyle = "#0a0d12";
+    ctx.fillStyle = colour("--bg-inset");
     ctx.fillRect(0, 0, w, h);
 
     const values = timings.filter((v) => v > 0);
@@ -608,9 +637,9 @@ function setupTiming() {
     const plotH = h - pad.top - pad.bottom;
     const barW = plotW / timings.length;
 
-    ctx.strokeStyle = "#262d38";
+    ctx.strokeStyle = colour("--border");
     ctx.lineWidth = 1;
-    ctx.fillStyle = "#6b7785";
+    ctx.fillStyle = colour("--text-faint");
     ctx.font = "10px ui-monospace, monospace";
     ctx.textAlign = "right";
     for (let g = 0; g <= 4; g++) {
@@ -630,10 +659,12 @@ function setupTiming() {
       const barH = ((t - floor) / span) * plotH;
       const x = pad.left + i * barW;
       const y = pad.top + plotH - barH;
-      ctx.fillStyle = i === bestIndex ? (found ? "#3fb950" : "#4c8dff") : "#39424f";
+      ctx.fillStyle = i === bestIndex
+        ? colour(found ? "--good" : "--accent")
+        : colour("--border-strong");
       ctx.fillRect(x + barW * 0.15, y, barW * 0.7, barH);
 
-      ctx.fillStyle = i === bestIndex ? "#e6edf3" : "#6b7785";
+      ctx.fillStyle = colour(i === bestIndex ? "--text" : "--text-faint");
       ctx.font = "11px ui-monospace, monospace";
       ctx.textAlign = "center";
       ctx.fillText(TOKEN_ALPHABET[i], x + barW / 2, h - 10);
@@ -769,6 +800,14 @@ function setupTiming() {
     stopBtn.disabled = true;
   };
 
+  repaints.push(() => {
+    if (lastChart) drawChart(...lastChart);
+    else {
+      ctx.fillStyle = colour("--bg-inset");
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+    }
+  });
+
   runBtn.addEventListener("click", run);
   stopBtn.addEventListener("click", () => { cancelled = true; });
   renderToken("", TOKEN.length);
@@ -785,6 +824,10 @@ const runPad = setupPad();
 const runOracle = setupOracle();
 setupExtend();
 const runTiming = setupTiming();
+
+document.addEventListener("themechange", () => {
+  for (const repaint of repaints) repaint();
+});
 
 // Run them one after another rather than all at once, so the page stays
 // responsive and each result appears as it lands. Every card then shows a

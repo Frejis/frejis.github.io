@@ -64,14 +64,14 @@ a.demo {
   font-weight: 550;
   font-size: .9rem;
   text-decoration: none;
-  color: #07101f;
+  color: var(--on-accent);
   background: var(--accent);
   border: 1px solid var(--accent);
   border-radius: var(--radius-sm);
   padding: .4rem .8rem;
   transition: background .12s;
 }
-a.demo:hover { background: #6ba1ff; color: #07101f; }
+a.demo:hover { background: var(--accent-hover); color: var(--on-accent); }
 
 a.writeup {
   font-size: .88rem;
@@ -156,7 +156,7 @@ a.quick-item {
   padding: .6rem .75rem;
   transition: border-color .12s, background .12s;
 }
-a.quick-item:hover { border-color: var(--accent); background: #12181f; color: var(--text); }
+a.quick-item:hover { border-color: var(--accent); background: var(--btn-hover); color: var(--text); }
 a.quick-item .name { font-weight: 550; font-size: .93rem; display: block; }
 a.quick-item .what { color: var(--text-faint); font-size: .8rem; }
 

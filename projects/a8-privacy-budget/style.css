@@ -1,5 +1,34 @@
 /* Privacy Budget — project-specific styling only. Shared look lives in theme.css. */
 
+/* Three shades the shared palette does not name: the dark end of the two
+   warning gradients on the meter, the wash behind a breach panel, and the
+   translucent accent band on the explorer chart (read from JS at draw time).
+   Defined under both palettes so they switch with everything else. */
+:root,
+:root[data-theme="dark"] {
+  --warn-deep: #4a3a08;
+  --bad-deep: #4a1512;
+  --bad-wash: #2a1010;
+  --meter-shadow: rgb(0 0 0 / .8);
+  --accent-band: rgb(76 141 255 / .1);
+}
+:root[data-theme="light"] {
+  --warn-deep: #f0d79a;
+  --bad-deep: #f3c3c1;
+  --bad-wash: #fdeceb;
+  --meter-shadow: rgb(255 255 255 / .7);
+  --accent-band: rgb(11 95 208 / .12);
+}
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme]) {
+    --warn-deep: #f0d79a;
+    --bad-deep: #f3c3c1;
+    --bad-wash: #fdeceb;
+    --meter-shadow: rgb(255 255 255 / .7);
+    --accent-band: rgb(11 95 208 / .12);
+  }
+}
+
 /* `hidden` must win over the display set by .grid and friends. */
 [hidden] { display: none !important; }
 
@@ -33,8 +62,8 @@
   background: linear-gradient(90deg, var(--accent-dim), var(--accent));
   transition: width .45s cubic-bezier(.2, .7, .3, 1), background .45s;
 }
-.meter.low .meter-fill { background: linear-gradient(90deg, #4a3a08, var(--warn)); }
-.meter.empty .meter-fill { background: linear-gradient(90deg, #4a1512, var(--bad)); }
+.meter.low .meter-fill { background: linear-gradient(90deg, var(--warn-deep), var(--warn)); }
+.meter.empty .meter-fill { background: linear-gradient(90deg, var(--bad-deep), var(--bad)); }
 .meter-text {
   position: absolute;
   inset: 0;
@@ -44,7 +73,7 @@
   font-size: .9rem;
   font-weight: 600;
   letter-spacing: .01em;
-  text-shadow: 0 1px 3px rgba(0, 0, 0, .8);
+  text-shadow: 0 1px 3px var(--meter-shadow);
 }
 
 .budget-stats { margin-bottom: 1rem; }
@@ -143,7 +172,7 @@
 }
 .attack-result.breach {
   border-color: var(--bad);
-  background: #2a1010;
+  background: var(--bad-wash);
   animation: breach-in .5s ease;
 }
 @keyframes breach-in {

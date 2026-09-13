@@ -229,7 +229,12 @@ function randomText(bytes) {
   return s;
 }
 
+// The last measured run, kept so the chart can be repainted in the new
+// palette when the theme changes. Canvas pixels do not inherit CSS.
+let lastBenchResults = null;
+
 function drawChart(results) {
+  lastBenchResults = results;
   const ctx = benchCanvas.getContext("2d");
   const w = benchCanvas.width;
   const h = benchCanvas.height;
@@ -244,9 +249,9 @@ function drawChart(results) {
 
   const maxThroughput = Math.max(...results.map((r) => r.throughput)) * 1.15;
   const styles = getComputedStyle(document.documentElement);
-  const gridColor = styles.getPropertyValue("--border").trim() || "#262d38";
-  const textColor = styles.getPropertyValue("--text-dim").trim() || "#9aa7b4";
-  const accent = styles.getPropertyValue("--accent").trim() || "#4c8dff";
+  const gridColor = styles.getPropertyValue("--border").trim();
+  const textColor = styles.getPropertyValue("--text-dim").trim();
+  const accent = styles.getPropertyValue("--accent").trim();
 
   ctx.strokeStyle = gridColor;
   ctx.fillStyle = textColor;
@@ -337,6 +342,10 @@ runBenchmarkBtn.addEventListener("click", async () => {
   } finally {
     runBenchmarkBtn.disabled = false;
   }
+});
+
+document.addEventListener("themechange", () => {
+  if (lastBenchResults) drawChart(lastBenchResults);
 });
 
 // ---------- init ----------

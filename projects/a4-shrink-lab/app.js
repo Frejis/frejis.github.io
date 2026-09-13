@@ -213,6 +213,10 @@ function chartColours() {
   };
 }
 
+// Canvas pixels keep the palette they were drawn with, so each chart remembers
+// the data it last drew and repaints itself when the theme changes.
+const lastDrawn = { shrink: null, dist: null, bench: null };
+
 function clearCanvas(cv) {
   const ctx = cv.getContext("2d");
   ctx.clearRect(0, 0, cv.width, cv.height);
@@ -224,7 +228,8 @@ function clearCanvas(cv) {
 // is literally true instead of the whole chart snapping in at once.
 let shrinkAnimId = 0;
 
-function drawShrinkChart(path) {
+function drawShrinkChart(path, animate = true) {
+  lastDrawn.shrink = path;
   const myAnimId = ++shrinkAnimId; // supersedes any animation already in flight
   const cv = el.shrinkChart;
   const col = chartColours();
@@ -297,10 +302,16 @@ function drawShrinkChart(path) {
 
     if (shown < accepted.length) requestAnimationFrame(frame);
   }
+
+  if (!animate) {
+    frame(t0 + totalMs); // draw the final state in one pass, no animation
+    return;
+  }
   requestAnimationFrame(frame);
 }
 
 function drawDistribution(sizes) {
+  lastDrawn.dist = sizes;
   const cv = el.distChart;
   const ctx = clearCanvas(cv);
   const col = chartColours();
@@ -346,6 +357,7 @@ function drawDistribution(sizes) {
 // -------------------------------------------------------------- benchmark
 
 function resetBenchmark() {
+  lastDrawn.bench = null;
   el.benchStatus.textContent = "not run yet";
   el.benchNote.textContent = "";
   drawBenchPlaceholder();
@@ -393,6 +405,7 @@ function runBenchmark() {
 }
 
 function drawBenchChart(runsToFailure) {
+  lastDrawn.bench = runsToFailure;
   const cv = el.benchChart;
   const ctx = clearCanvas(cv);
   const col = chartColours();
@@ -430,6 +443,13 @@ function drawBenchChart(runsToFailure) {
   ctx.textAlign = "center";
   ctx.fillText("runs to first failure \u2192", (pad.l + W - pad.r) / 2, H - 4);
 }
+
+document.addEventListener("themechange", () => {
+  if (lastDrawn.shrink) drawShrinkChart(lastDrawn.shrink, false);
+  if (lastDrawn.dist) drawDistribution(lastDrawn.dist);
+  if (lastDrawn.bench) drawBenchChart(lastDrawn.bench);
+  else drawBenchPlaceholder();
+});
 
 // go
 resetBenchmark();

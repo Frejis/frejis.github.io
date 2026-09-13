@@ -1,5 +1,15 @@
 /* a2-sumcheck: only what the theme does not already cover. */
 
+/* The hypercube splits into an x = 0 half and an x = 1 half, drawn in the
+   accent and the alternate hue. The shared palette has --accent-dim for the
+   first but no counterpart for --alt, so define one here, in both palettes. */
+:root,
+:root[data-theme="dark"] { --alt-dim: #33224d; }
+:root[data-theme="light"] { --alt-dim: #e8dcfb; }
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme]) { --alt-dim: #e8dcfb; }
+}
+
 .controls {
   display: grid;
   grid-template-columns: 200px 1fr 1fr auto;
@@ -74,8 +84,8 @@
 .cell .bits { font-size: .62rem; color: var(--text-faint); letter-spacing: .06em; }
 .cell .val { font-size: .72rem; color: var(--text); }
 .cell.half-zero { border-color: var(--accent-dim); }
-.cell.half-one { border-color: #4a2f6b; }
-.cell.folded { border-color: var(--border-strong); background: #12161d; }
+.cell.half-one { border-color: var(--alt-dim); }
+.cell.folded { border-color: var(--border-strong); background: var(--bg-raised); }
 .cell.dead { opacity: .12; transform: scale(.9); }
 
 /* dense mode: past v = 8 the numbers stop fitting, so show intensity only */
@@ -91,8 +101,8 @@
   display: inline-block;
 }
 .swatch.zero { border-color: var(--accent); background: var(--accent-dim); }
-.swatch.one { border-color: var(--alt); background: #33224d; }
-.swatch.fixed { border-color: var(--border-strong); background: #12161d; }
+.swatch.one { border-color: var(--alt); background: var(--alt-dim); }
+.swatch.fixed { border-color: var(--border-strong); background: var(--bg-raised); }
 
 /* ---------- benchmark ---------- */
 

@@ -31,17 +31,27 @@ const compactNumber = (n) => {
   return rounded.toLocaleString();
 };
 
-// A fixed colour per field key, cycled through the theme's accent palette so
-// the legend never invents a colour not already used elsewhere on the page.
-const FIELD_COLORS = ["#4c8dff", "#3fb950", "#d29922", "#bc8cff", "#f85149", "#6ba1ff", "#2ea8a0"];
-const colorFor = (() => {
+// Canvas cannot inherit CSS, so every chart colour is read from the live
+// palette at draw time rather than cached when this module loaded.
+const cssVar = (name) => getComputedStyle(document.body).getPropertyValue(name).trim();
+
+// A fixed palette variable per field key. Seven fields need more distinct
+// hues than the shared palette carries, so two come from style.css, which
+// defines them under both themes.
+const FIELD_VARS = [
+  "--accent", "--good", "--warn", "--alt", "--bad", "--field-teal", "--field-magenta",
+];
+const varFor = (() => {
   const assigned = new Map();
   let next = 0;
   return (key) => {
-    if (!assigned.has(key)) assigned.set(key, FIELD_COLORS[next++ % FIELD_COLORS.length]);
+    if (!assigned.has(key)) assigned.set(key, FIELD_VARS[next++ % FIELD_VARS.length]);
     return assigned.get(key);
   };
 })();
+// The byte map and legend are DOM, so they can reference the variable itself
+// and switch with the stylesheet without a repaint.
+const colorFor = (key) => `var(${varFor(key)})`;
 
 // ============================================================================
 // A synthetic "current reading" driven by the sliders, plus a fixed previous
@@ -94,7 +104,7 @@ function renderByteMap(container, fields, payloadBytes, frameBytes, onBitClick) 
       el.className = "bit" + (bitValue ? " on" : "");
       el.textContent = String(bitValue);
       el.title = `${owner ?? "pad"} · bit ${bitIndex}`;
-      el.style.setProperty("--bit-color", owner === "crc" ? "#6b7785" : colorFor(owner ?? "pad"));
+      el.style.setProperty("--bit-color", owner === "crc" ? "var(--text-faint)" : colorFor(owner ?? "pad"));
       if (onBitClick) {
         el.addEventListener("click", () => onBitClick(byteIndex, bit));
       }
@@ -119,7 +129,7 @@ function renderLegend(container, fields) {
   }
   const crc = document.createElement("span");
   crc.className = "swatch";
-  crc.style.setProperty("--sw-color", "#6b7785");
+  crc.style.setProperty("--sw-color", "var(--text-faint)");
   crc.textContent = "CRC-16 (16b)";
   container.appendChild(crc);
 }
@@ -316,13 +326,13 @@ function sizeCanvasForDisplay(canvas) {
 function drawBerChart(canvas, result) {
   const { ctx, w, h } = sizeCanvasForDisplay(canvas);
   ctx.clearRect(0, 0, w, h);
-  ctx.fillStyle = "#0a0d12";
+  ctx.fillStyle = cssVar("--bg-inset");
   ctx.fillRect(0, 0, w, h);
 
   const bars = [
-    { label: "intact", value: result.intact, color: "#3fb950" },
-    { label: "caught by CRC", value: result.caughtByCrc, color: "#d29922" },
-    { label: "undetected", value: result.undetected, color: "#f85149" },
+    { label: "intact", value: result.intact, color: cssVar("--good") },
+    { label: "caught by CRC", value: result.caughtByCrc, color: cssVar("--warn") },
+    { label: "undetected", value: result.undetected, color: cssVar("--bad") },
   ];
   const pad = { left: 76, right: 16, top: 30, bottom: 30 };
   const plotW = w - pad.left - pad.right;
@@ -333,8 +343,8 @@ function drawBerChart(canvas, result) {
   const max = Math.max(...bars.map((b) => b.value), 1) * 1.15;
   const barW = plotW / bars.length;
 
-  ctx.strokeStyle = "#262d38";
-  ctx.fillStyle = "#6b7785";
+  ctx.strokeStyle = cssVar("--border");
+  ctx.fillStyle = cssVar("--text-faint");
   ctx.font = "10px ui-monospace, monospace";
   ctx.textAlign = "right";
   for (let g = 0; g <= 4; g++) {
@@ -352,11 +362,11 @@ function drawBerChart(canvas, result) {
     const y = pad.top + plotH - barH;
     ctx.fillStyle = b.color;
     ctx.fillRect(x + barW * 0.2, y, barW * 0.6, barH);
-    ctx.fillStyle = "#e6edf3";
+    ctx.fillStyle = cssVar("--text");
     ctx.textAlign = "center";
     ctx.font = "11px ui-monospace, monospace";
     ctx.fillText(b.value.toLocaleString(), x + barW / 2, y - 6);
-    ctx.fillStyle = "#9aa7b4";
+    ctx.fillStyle = cssVar("--text-dim");
     ctx.fillText(b.label, x + barW / 2, h - 10);
   });
 }
@@ -439,6 +449,7 @@ function setupBerSweep(getReading) {
   };
   runBtn.addEventListener("click", run);
   resetBtn.addEventListener("click", () => { resetTotals(); renderTotals(); });
+  document.addEventListener("themechange", () => drawBerChart(canvas, totals));
   run();
 }
 
@@ -449,7 +460,7 @@ function setupBerSweep(getReading) {
 function drawBatteryChart(canvas, points, currentIntervalMinutes) {
   const { ctx, w, h } = sizeCanvasForDisplay(canvas);
   ctx.clearRect(0, 0, w, h);
-  ctx.fillStyle = "#0a0d12";
+  ctx.fillStyle = cssVar("--bg-inset");
   ctx.fillRect(0, 0, w, h);
 
   const pad = { left: 46, right: 14, top: 14, bottom: 30 };
@@ -461,8 +472,8 @@ function drawBatteryChart(canvas, points, currentIntervalMinutes) {
   const xAt = (i) => pad.left + (plotW * i) / (n - 1);
   const yAt = (years) => pad.top + plotH - (years / maxYears) * plotH;
 
-  ctx.strokeStyle = "#262d38";
-  ctx.fillStyle = "#6b7785";
+  ctx.strokeStyle = cssVar("--border");
+  ctx.fillStyle = cssVar("--text-faint");
   ctx.font = "10px ui-monospace, monospace";
   ctx.textAlign = "right";
   for (let g = 0; g <= 4; g++) {
@@ -484,26 +495,26 @@ function drawBatteryChart(canvas, points, currentIntervalMinutes) {
     });
     ctx.stroke();
   };
-  drawLine(points.full, "#f85149");
-  drawLine(points.delta, "#3fb950");
+  drawLine(points.full, cssVar("--bad"));
+  drawLine(points.delta, cssVar("--good"));
 
   // Marker at the current interval.
   const idx = points.intervals.findIndex((v) => v >= currentIntervalMinutes);
   const markIdx = idx < 0 ? n - 1 : idx;
-  ctx.fillStyle = "#e6edf3";
+  ctx.fillStyle = cssVar("--text");
   ctx.beginPath();
   ctx.arc(xAt(markIdx), yAt(points.delta[markIdx]), 3.5, 0, Math.PI * 2);
   ctx.fill();
 
-  ctx.fillStyle = "#9aa7b4";
+  ctx.fillStyle = cssVar("--text-dim");
   ctx.textAlign = "center";
   ctx.font = "10px ui-monospace, monospace";
   ctx.fillText("transmit interval, minutes (log-ish scale)", w / 2, h - 8);
 
   ctx.textAlign = "left";
-  ctx.fillStyle = "#f85149";
+  ctx.fillStyle = cssVar("--bad");
   ctx.fillText("full", pad.left + 4, pad.top + 10);
-  ctx.fillStyle = "#3fb950";
+  ctx.fillStyle = cssVar("--good");
   ctx.fillText("delta", pad.left + 4, pad.top + 24);
 }
 
@@ -549,6 +560,7 @@ function setupBattery(getReading) {
 
   intervalSlider.addEventListener("input", render);
   capacitySlider.addEventListener("input", render);
+  document.addEventListener("themechange", render);
   const inputs = ["ctl-meterId", "ctl-volume", "ctl-flow", "ctl-battery",
     "ctl-leak", "ctl-burst", "ctl-backflow", "ctl-tamper", "ctl-lowBattery"];
   for (const id of inputs) $(id).addEventListener("input", render);

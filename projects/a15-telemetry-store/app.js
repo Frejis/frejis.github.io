@@ -193,6 +193,8 @@ rebuildLive();
 
 // ---------------------------------------------------------------- canvas helpers
 
+// Read at draw time, never cached: a canvas cannot inherit CSS, so a value
+// captured at module load keeps the palette the page opened with.
 function chartColours() {
   const css = getComputedStyle(document.body);
   const c = (name) => css.getPropertyValue(name).trim();
@@ -307,7 +309,11 @@ function drawChart(cv, series, { yLabel = "", highlightFn = null, downsampled = 
     if (s.points.length === 0) continue;
     // min/max band, only meaningful for a downsampled series
     if (isBucket) {
-      ctx.fillStyle = s.colour + "33";
+      // globalAlpha rather than appending "33" to the colour: the band has to
+      // stay translucent whatever notation the palette variable arrives in.
+      ctx.save();
+      ctx.globalAlpha = 0.2;
+      ctx.fillStyle = s.colour;
       ctx.beginPath();
       s.points.forEach((p, i) => {
         const x = xOf(tsOf(p));
@@ -320,6 +326,7 @@ function drawChart(cv, series, { yLabel = "", highlightFn = null, downsampled = 
       }
       ctx.closePath();
       ctx.fill();
+      ctx.restore();
     }
     ctx.strokeStyle = s.colour;
     ctx.lineWidth = 1.6;
@@ -569,3 +576,8 @@ function runQuery() {
 
 el.queryBtn.addEventListener("click", runQuery);
 runQuery();
+
+// All five canvases on this page are painted by renderLiveCharts (three live
+// charts plus the naive/reset-aware rate pair), and painted pixels cannot
+// follow a CSS palette change.
+document.addEventListener("themechange", renderLiveCharts);

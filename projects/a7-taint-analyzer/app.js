@@ -309,8 +309,8 @@ function renderCFG(cfg, taintResult, reachingResult) {
   });
 
   const defs = svgEl('defs');
-  defs.innerHTML = `<marker id="arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 z" fill="var(--text-faint)"/></marker>
-    <marker id="arrow-witness" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 z" fill="var(--accent)"/></marker>`;
+  defs.innerHTML = `<marker id="arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 z" class="cfg-arrow"/></marker>
+    <marker id="arrow-witness" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 z" class="cfg-arrow on-witness"/></marker>`;
   svg.appendChild(defs);
 
   const edgeLayer = svgEl('g', { class: 'cfg-edges' });
@@ -328,8 +328,6 @@ function renderCFG(cfg, taintResult, reachingResult) {
       edgeLayer.appendChild(svgEl('path', {
         d,
         fill: 'none',
-        stroke: isWitness ? 'var(--accent)' : 'var(--border-strong)',
-        'stroke-width': isWitness ? 2.5 : 1.5,
         'marker-end': `url(#${isWitness ? 'arrow-witness' : 'arrow'})`,
         class: isWitness ? 'cfg-edge on-witness' : 'cfg-edge',
       }));
@@ -370,7 +368,7 @@ function renderCFG(cfg, taintResult, reachingResult) {
   cfgContainer.appendChild(svg);
 
   cfgLegend.innerHTML = taintResult
-    ? `<span class="tag">clean block</span><span class="tag bad">tainted block</span><span class="tag" style="border-color:var(--accent);color:var(--accent);">witness edge</span>`
+    ? `<span class="tag">clean block</span><span class="tag bad">tainted block</span><span class="tag cfg-legend-witness">witness edge</span>`
     : `<span class="tag">reaching-definitions block (see def IDs in the findings panel)</span>`;
 }
 
@@ -463,6 +461,9 @@ function renderStats(stats, program) {
 
 // -------------------------------------------------------------- benchmark ---
 
+// Kept so the chart can be redrawn in the new palette without re-measuring.
+let benchPoints = null;
+
 function runBenchmark() {
   benchStatus.textContent = 'running…';
   requestAnimationFrame(() => {
@@ -480,6 +481,7 @@ function runBenchmark() {
         timeMs: t1 - t0,
       };
     });
+    benchPoints = points;
     drawBenchChart(points);
     benchStatus.textContent = `measured ${points.length} examples just now`;
     const hardest = points.reduce((a, b) => (b.iterations > a.iterations ? b : a));
@@ -531,7 +533,7 @@ function drawBenchChart(points) {
     ctx.beginPath();
     ctx.arc(x, y, 9, 0, Math.PI * 2);
     ctx.fill();
-    ctx.fillStyle = '#07101f';
+    ctx.fillStyle = style.getPropertyValue('--on-accent').trim();
     ctx.font = 'bold 10px ui-monospace, monospace';
     ctx.fillText(String(i + 1), x, y + 1);
   });
@@ -544,6 +546,12 @@ function drawBenchChart(points) {
 }
 
 // ------------------------------------------------------------------- init ---
+
+// The CFG is SVG and follows the palette through its classes; the benchmark
+// is canvas and has to be painted again.
+document.addEventListener('themechange', () => {
+  if (benchPoints) drawBenchChart(benchPoints);
+});
 
 function init() {
   const example = EXAMPLES.find((e) => e.id === DEFAULT_EXAMPLE_ID);

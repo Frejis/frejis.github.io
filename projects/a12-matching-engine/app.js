@@ -43,6 +43,7 @@ const state = {
   book: new OrderBook(),
   trades: [], // most recent first, capped
   latencySamples: null, // microseconds, from the last "run N orders"
+  latencyStats: null, // kept so a palette change can repaint without re-running
 };
 
 const groups = (n) => String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g, "\u2009");
@@ -315,7 +316,15 @@ el.runBtn.addEventListener("click", async () => {
   el.runTag.className = "tag good";
   el.runBtn.disabled = false;
 
+  state.latencyStats = stats;
   drawLatencyChart(samplesUs, stats);
+});
+
+// The chart holds painted pixels that cannot follow a CSS palette change.
+document.addEventListener("themechange", () => {
+  if (state.latencySamples && state.latencyStats) {
+    drawLatencyChart(state.latencySamples, state.latencyStats);
+  }
 });
 
 // ------------------------------------------------------------------- chart

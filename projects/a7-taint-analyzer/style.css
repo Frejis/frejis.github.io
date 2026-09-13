@@ -73,7 +73,15 @@
 .cfg-node.on-witness .cfg-node-box { stroke: var(--accent); stroke-width: 2.5px; }
 .cfg-node.rd .cfg-node-box { stroke: var(--alt); }
 
-.cfg-edge.on-witness { filter: drop-shadow(0 0 1px var(--accent)); }
+/* Stroke and arrowhead fill live here rather than on the SVG attributes: a
+   presentation attribute cannot hold var(), and a class inherits the palette
+   so the graph follows the theme without being rebuilt. */
+.cfg-edge { stroke: var(--border-strong); stroke-width: 1.5px; }
+.cfg-edge.on-witness { stroke: var(--accent); stroke-width: 2.5px; filter: drop-shadow(0 0 1px var(--accent)); }
+.cfg-arrow { fill: var(--text-faint); }
+.cfg-arrow.on-witness { fill: var(--accent); }
+
+.cfg-legend-witness { border-color: var(--accent); color: var(--accent); }
 
 .step-detail label { margin-bottom: .15rem; }
 .step-detail p.mono { margin: 0; font-size: .85rem; }

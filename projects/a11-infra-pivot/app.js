@@ -197,11 +197,14 @@ function drawGraph() {
   ctx.clearRect(0, 0, w, h);
 
   const selectedSet = new Set(session.selected);
-  const style = getComputedStyle(document.documentElement);
-  const borderColor = style.getPropertyValue("--border").trim() || "#262d38";
-  const accent = style.getPropertyValue("--accent").trim() || "#4c8dff";
-  const dim = style.getPropertyValue("--text-faint").trim() || "#6b7785";
-  const alt = style.getPropertyValue("--alt").trim() || "#bc8cff";
+  // Read every frame, never cached: the canvas cannot inherit CSS, so a value
+  // captured once keeps the palette the page opened with.
+  const style = getComputedStyle(document.body);
+  const borderColor = style.getPropertyValue("--border").trim();
+  const accent = style.getPropertyValue("--accent").trim();
+  const dim = style.getPropertyValue("--text-faint").trim();
+  const alt = style.getPropertyValue("--alt").trim();
+  const ring = style.getPropertyValue("--text").trim();
 
   ctx.lineWidth = 1;
   for (const edge of graph.edges) {
@@ -227,7 +230,7 @@ function drawGraph() {
     ctx.fill();
     if (isFocus) {
       ctx.lineWidth = 2;
-      ctx.strokeStyle = "#fff";
+      ctx.strokeStyle = ring;
       ctx.stroke();
     }
   }
@@ -282,6 +285,11 @@ function animate() {
   drawGraph();
   requestAnimationFrame(animate);
 }
+
+// The layout loop redraws every frame, so the graph follows the palette on its
+// own; the listener makes the repaint immediate and explicit rather than
+// dependent on that loop still being there.
+document.addEventListener("themechange", drawGraph);
 
 render();
 requestAnimationFrame(animate);

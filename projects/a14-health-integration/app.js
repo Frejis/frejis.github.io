@@ -247,6 +247,23 @@ function renderDlq() {
 // width/height attribute.
 // ============================================================================
 
+// Read at draw time, never cached: a canvas cannot inherit CSS, so a value
+// captured at module load keeps the palette the page opened with.
+function chartColours() {
+  const css = getComputedStyle(document.body);
+  const c = (name) => css.getPropertyValue(name).trim();
+  return {
+    inset: c("--bg-inset"),
+    border: c("--border"),
+    faint: c("--text-faint"),
+    dim: c("--text-dim"),
+    text: c("--text"),
+    good: c("--good"),
+    warn: c("--warn"),
+    bad: c("--bad"),
+  };
+}
+
 function sizeCanvasForDisplay(canvas) {
   const dpr = window.devicePixelRatio || 1;
   const rect = canvas.getBoundingClientRect();
@@ -283,14 +300,15 @@ const BATCH_BAR_ORDER = [
 
 function drawBatchChart(canvas, summary) {
   const { ctx, w, h } = sizeCanvasForDisplay(canvas);
+  const col = chartColours();
   ctx.clearRect(0, 0, w, h);
-  ctx.fillStyle = "#0a0d12";
+  ctx.fillStyle = col.inset;
   ctx.fillRect(0, 0, w, h);
 
   const bars = BATCH_BAR_ORDER.map((b) => ({
     ...b,
     value: summary[b.key] ?? 0,
-    color: b.key === "delivered" ? "#3fb950" : b.key === "duplicate" ? "#d29922" : "#f85149",
+    color: b.key === "delivered" ? col.good : b.key === "duplicate" ? col.warn : col.bad,
   }));
   const pad = { left: 60, right: 16, top: 30, bottom: 46 };
   const plotW = w - pad.left - pad.right;
@@ -298,8 +316,8 @@ function drawBatchChart(canvas, summary) {
   const max = Math.max(...bars.map((b) => b.value), 1) * 1.15;
   const barW = plotW / bars.length;
 
-  ctx.strokeStyle = "#262d38";
-  ctx.fillStyle = "#6b7785";
+  ctx.strokeStyle = col.border;
+  ctx.fillStyle = col.faint;
   ctx.font = "10px ui-monospace, monospace";
   ctx.textAlign = "right";
   for (let g = 0; g <= 4; g++) {
@@ -317,11 +335,11 @@ function drawBatchChart(canvas, summary) {
     const y = pad.top + plotH - barH;
     ctx.fillStyle = b.color;
     ctx.fillRect(x + barW * 0.18, y, barW * 0.64, barH);
-    ctx.fillStyle = "#e6edf3";
+    ctx.fillStyle = col.text;
     ctx.textAlign = "center";
     ctx.font = "11px ui-monospace, monospace";
     ctx.fillText(b.value.toLocaleString(), x + barW / 2, y - 6);
-    ctx.fillStyle = "#9aa7b4";
+    ctx.fillStyle = col.dim;
     ctx.font = "10px ui-monospace, monospace";
     // Two-line label so "died: transform" does not overrun its bar's width.
     const words = b.label.split(" ");
@@ -335,6 +353,10 @@ function drawBatchChart(canvas, summary) {
 // the run is repeated (accumulating elapsed time and message count) until
 // the total is comfortably measurable, then throughput is one honest
 // average over however many repeats that took — never a single tiny sample.
+// The last batch drawn, kept so a palette change can repaint the chart from
+// the same numbers rather than re-running (and re-timing) the batch.
+let lastBatch = null;
+
 const MIN_TIMED_MS = 30;
 const MAX_REPEATS = 60;
 
@@ -426,6 +448,7 @@ function setupThroughput() {
         `integration platform.`;
     }
 
+    lastBatch = { canvas, summary };
     drawBatchChart(canvas, summary);
     runBtn.disabled = false;
   };
@@ -439,3 +462,7 @@ function setupThroughput() {
 setupEditor();
 renderDlq();
 setupThroughput();
+
+document.addEventListener("themechange", () => {
+  if (lastBatch) drawBatchChart(lastBatch.canvas, lastBatch.summary);
+});
