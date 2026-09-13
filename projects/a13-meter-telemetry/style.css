@@ -20,9 +20,9 @@
    * the shared --text-faint sat too close to the teal, so it gets a darker
    * grey of its own here. */
   --field-crc: #3c4856;
-  /* The shared --alt violet sits only 20 degrees from --accent blue, which at
-   * 8px chip size reads as one colour. This one clears both the blue and the
-   * status-flag magenta. */
+  /* The shared --alt violet sits close enough to --accent blue in hue that at
+   * bit-chip size the two fields read as one colour. This one clears both the
+   * blue and the status-flag magenta. */
   --field-violet: #7c418e;
 }
 @media (prefers-color-scheme: light) {

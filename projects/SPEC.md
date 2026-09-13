@@ -88,8 +88,12 @@ a page needs no markup of its own. Every page must include, after the
 stylesheet links:
 
 ```html
-<script src="../shared/theme-toggle.js" defer></script>
+<script src="../shared/theme-toggle.js"></script>
 ```
+
+Not `defer`: a reader whose stored choice is light would otherwise get a
+flash of the dark theme before the script runs. It guards its own DOM work
+behind `DOMContentLoaded`, so running it during head parsing is safe.
 
 (`../../shared/theme-toggle.js` from a blog post, which sits one level deeper.)
 

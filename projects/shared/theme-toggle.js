@@ -1,6 +1,6 @@
 /* Shared light/dark toggle. Include on every page with:
  *
- *   <script src="../shared/theme-toggle.js" defer></script>
+ *   <script src="../shared/theme-toggle.js"></script>
  *   (from a blog post, one level deeper: ../../shared/theme-toggle.js)
  *
  * It injects its own button, so a page needs no markup for it.

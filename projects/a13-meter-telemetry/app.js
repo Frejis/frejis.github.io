@@ -35,8 +35,8 @@ const compactNumber = (n) => {
 // palette at draw time rather than cached when this module loaded.
 const cssVar = (name) => getComputedStyle(document.body).getPropertyValue(name).trim();
 
-// A fixed palette variable per field key. Seven fields need more distinct
-// hues than the shared palette carries, so two come from style.css, which
+// A fixed palette variable per field key. The byte map needs more distinct
+// hues than the shared palette carries, so four come from style.css, which
 // defines them under both themes.
 const FIELD_VARS = [
   "--accent", "--good", "--warn", "--field-violet", "--bad", "--field-teal", "--field-magenta",
@@ -104,7 +104,11 @@ function renderByteMap(container, fields, payloadBytes, frameBytes, onBitClick) 
       el.className = "bit" + (bitValue ? " on" : "");
       el.textContent = String(bitValue);
       el.title = `${owner ?? "pad"} · bit ${bitIndex}`;
-      el.style.setProperty("--bit-color", owner === "crc" ? "var(--field-crc)" : colorFor(owner ?? "pad"));
+      // Padding is not a field, so it shares the CRC's neutral rather than
+      // taking a field hue - which, with seven hues and eight keys, would wrap
+      // and make pad bits look like frame-type bits.
+      const neutral = owner === "crc" || owner == null;
+      el.style.setProperty("--bit-color", neutral ? "var(--field-crc)" : colorFor(owner));
       if (onBitClick) {
         el.addEventListener("click", () => onBitClick(byteIndex, bit));
       }
