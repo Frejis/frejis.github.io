@@ -9,6 +9,7 @@ import {
   crc16,
   FIELD_MAX,
   FULL_FIELDS,
+  FULL_PAYLOAD_BITS,
   FULL_PAYLOAD_BYTES,
   FULL_FRAME_BYTES,
   fieldAtBit,
@@ -144,7 +145,14 @@ function setupByteMap() {
     renderByteMap(mapEl, FULL_FIELDS, FULL_PAYLOAD_BYTES, frameBytes, null);
     sizeTag.textContent = `${FULL_FRAME_BYTES} bytes on air`;
     const crc = crc16(frameBytes.subarray(0, FULL_PAYLOAD_BYTES));
-    crcReadout.textContent = `CRC-16/CCITT-FALSE over the payload: 0x${crc.toString(16).padStart(4, "0")}`;
+    crcReadout.textContent =
+      `Check value the receiver recomputes to tell whether the message arrived intact ` +
+      `(CRC-16/CCITT-FALSE, over the payload): 0x${crc.toString(16).padStart(4, "0")}`;
+    $("bytemap-result").textContent =
+      `That reading is now ${FULL_PAYLOAD_BITS} bits of meter data squeezed into ` +
+      `${FULL_PAYLOAD_BYTES} bytes, plus 2 bytes of check value: ${FULL_FRAME_BYTES} bytes ` +
+      `is the whole thing the meter puts on air. Move any control and the coloured bits ` +
+      `above are exactly what changes on the radio.`;
   };
 
   for (const id of inputs) $(id).addEventListener("input", render);
@@ -175,6 +183,10 @@ function setupCompare(getReading) {
       $("delta-bytes").textContent = String(delta.length);
       const saved = 1 - delta.length / full.length;
       $("delta-saving").textContent = `${(saved * 100).toFixed(0)}%`;
+      $("compare-result").textContent =
+        `Same reading, ${delta.length} bytes instead of ${full.length} — ${(saved * 100).toFixed(0)}% ` +
+        `fewer bytes on air, because the delta frame only states what changed since the ` +
+        `previous reading instead of restating all of it.`;
       return { full, delta };
     }
 
@@ -189,6 +201,10 @@ function setupCompare(getReading) {
       `meter would send a full frame instead of a delta one.`;
     $("delta-bytes").textContent = String(full.length);
     $("delta-saving").textContent = "0%";
+    $("compare-result").textContent =
+      `The jump since the previous reading is too large for the short delta field, so ` +
+      `there is no saving this time: the meter falls back to the full ${full.length}-byte ` +
+      `frame rather than sending a number it cannot fit.`;
     return { full, delta: full };
   };
 
@@ -240,6 +256,9 @@ function setupCorruption(getReading) {
       garbage = true;
     }
     if (!valid) garbage = true;
+    $("corrupt-result").textContent = valid
+      ? "Every bit is as the meter sent it: the check value still matches, so the receiver accepts this reading."
+      : "At least one bit is wrong. The check value no longer matches what the data says, so a real receiver throws this frame away rather than billing anyone for the numbers above.";
     decodedEl.className = "decoded-grid" + (garbage ? " garbage" : "");
     decodedEl.innerHTML = fields.map(([k, v]) =>
       `<div class="field"><span class="k">${k}</span><span class="v">${v}</span></div>`
@@ -373,6 +392,12 @@ function setupBerSweep(getReading) {
       <div class="stat"><span class="value">${totals.caughtByCrc.toLocaleString()}</span><span class="label">caught by CRC</span></div>
       <div class="stat"><span class="value">${totals.undetected.toLocaleString()}</span><span class="label">silently corrupted</span></div>
     `;
+    $("ber-plain").textContent = totals.total === 0 ? "" :
+      `Of ${totals.total.toLocaleString()} frames sent at this error rate, ` +
+      `${totals.intact.toLocaleString()} arrived untouched, ${totals.caughtByCrc.toLocaleString()} ` +
+      `arrived damaged and were spotted and dropped, and ${totals.undetected.toLocaleString()} ` +
+      `arrived damaged while still looking correct — those last ones are the readings a ` +
+      `utility would file as real.`;
     expectedEl.textContent = totals.total === 0 ? "" :
       `${totals.total.toLocaleString()} frames sent over ${runsAtCurrentRate} run(s) at this rate, ` +
       `${corrupted.toLocaleString()} corrupted, ${totals.undetected.toLocaleString()} undetected — ` +
@@ -509,6 +534,11 @@ function setupBattery(getReading) {
     $("years-full").textContent = yearsFull.toFixed(1);
     $("years-delta").textContent = yearsDelta.toFixed(1);
     $("years-gain").textContent = `\u00d7${(yearsDelta / yearsFull).toFixed(2)}`;
+    $("battery-result").textContent =
+      `Reporting at this interval on a ${capacityMah.toLocaleString()} mAh cell, the meter ` +
+      `runs about ${yearsFull.toFixed(1)} years on full frames and ${yearsDelta.toFixed(1)} ` +
+      `years on delta frames — the shorter message is worth ` +
+      `\u00d7${(yearsDelta / yearsFull).toFixed(2)} the time before someone has to visit it.`;
 
     // Sweep transmit interval from 1 minute to 24 hours for the chart.
     const intervals = [1, 2, 5, 10, 15, 30, 60, 120, 240, 480, 720, 1440];

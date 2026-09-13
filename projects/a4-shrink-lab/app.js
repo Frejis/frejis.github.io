@@ -121,12 +121,15 @@ function runNow({ forceSeed }) {
 
     if (result.passed) {
       el.runNote.textContent =
-        `No counterexample in ${groups(result.runsExecuted)} runs at seed ${result.seed}. ` +
-        `That is evidence, not proof: a correct-looking subject could still fail on a seed not tried here.`;
+        `Each square above is one randomly generated input; all ${groups(result.runsExecuted)} of them satisfied the property, ` +
+        `so nothing here contradicts the claim being made about this function. That is evidence, not proof: ` +
+        `a correct-looking subject could still fail on a seed not tried here.`;
       hideResult();
     } else {
       el.runNote.textContent =
-        `Reproduce this exact failure any time with seed ${result.seed} — the run is fully deterministic.`;
+        `Each square above is one randomly generated input; the red one broke the function` +
+        `${result.runsExecuted > 1 ? `, after ${groups(result.runsExecuted - 1)} that did not` : " on the very first try"}. ` +
+        `Reproduce this exact failure any time with seed ${result.seed} — the run is fully deterministic, so the bug does not vanish when you go looking for it.`;
       showResult(result);
     }
 
@@ -160,9 +163,12 @@ function showResult(result) {
   const to = result.minimalSize;
   if (from > 0 && to < from) {
     const pct = Math.round((1 - to / from) * 100);
-    el.reductionNote.textContent = `${groups(from)} \u2192 ${groups(to)} in size, ${pct}% smaller, in ${groups(result.shrinkPath.length - 1)} shrink attempts.`;
+    el.reductionNote.textContent = `${groups(from)} \u2192 ${groups(to)} in size, ${pct}% smaller, in ${groups(result.shrinkPath.length - 1)} shrink attempts. ` +
+      `The input on the right still breaks the function, and every simpler candidate the shrinker tried stopped breaking it, ` +
+      `so it is a bug report a person can read at a glance rather than one they have to narrow down by hand.`;
   } else {
-    el.reductionNote.textContent = `Already minimal, or size did not shrink further (${groups(from)} \u2192 ${groups(to)}).`;
+    el.reductionNote.textContent = `Size did not shrink further (${groups(from)} \u2192 ${groups(to)}). ` +
+      `Either the first failing input was already small, or none of the simpler candidates the shrinker tried still broke the function.`;
   }
 
   el.shrinkSection.hidden = false;

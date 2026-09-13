@@ -14,12 +14,26 @@
   <p class="eyebrow">A2 · verifiable computation</p>
   <h1>Convincing someone of a sum they never add up</h1>
   <p class="lede">
-    A prover adds together thousands of numbers and states the total. The verifier
-    never sees more than one of them, and still catches a lie with near-certainty.
-    This is the sumcheck protocol, the engine inside GKR and most of today's
-    proof systems. Press <strong>Next step</strong> and watch it run.
+    The sumcheck protocol, run one step at a time — press <strong>Next step</strong>.
   </p>
 </header>
+
+<section class="panel note">
+  <p style="margin:0 0 .5rem">
+    Suppose you pay a data centre to run a job too big for your laptop, and it
+    sends back an answer. Checking it the obvious way means doing the whole job
+    again, which defeats the point, so in practice you simply trust the
+    answer — and a machine that is broken, overcharging or lying looks exactly
+    like one that is working.
+  </p>
+  <p style="margin:0">
+    This page runs the procedure that removes the trust. The side that did the
+    work answers a short sequence of questions about it, and the side that paid
+    for it can tell a correct answer from a wrong one while doing a tiny
+    fraction of the arithmetic. It is what lets a blockchain accept a batch of
+    transactions it never re-executes.
+  </p>
+</section>
 
 <!-- ------------------------------------------------ controls -->
 <section>
@@ -96,8 +110,9 @@
 
       <div class="panel">
         <h3>Work done so far</h3>
-        <p class="faint" style="margin:-.25rem 0 .75rem">Field operations. The whole
-          protocol exists to keep the lower bar short.</p>
+        <p class="faint" style="margin:-.25rem 0 .75rem">Individual pieces of
+          arithmetic (field operations) each side has actually performed. The
+          whole protocol exists to keep the lower bar short.</p>
         <div class="bar-block">
           <div class="bar-label"><span>Prover</span><span class="mono" id="prover-ops">0</span></div>
           <div class="bar"><i id="prover-bar" class="fill prover"></i></div>
@@ -105,6 +120,11 @@
           <div class="bar"><i id="verifier-bar" class="fill verifier"></i></div>
         </div>
         <p class="faint" id="ops-ratio" style="margin:.75rem 0 0"></p>
+        <p class="faint" style="margin:.5rem 0 0">
+          The short bar is the argument. Anything the checker can do in that
+          little work, it can afford to do for every job it is sent — which is
+          what makes paying someone else to compute safe rather than hopeful.
+        </p>
       </div>
     </div>
 
@@ -131,10 +151,11 @@
   <h2>Can a liar get through?</h2>
   <div class="panel">
     <p class="muted" style="margin-top:0">
-      A cheating prover survives a round only if the verifier's random challenge
-      happens to land on a root of the difference of two degree-1 polynomials.
-      With v rounds that is at most <code class="inline">d·v / p</code>. Run it and
-      count.
+      A prover that lies has to guess, in advance, the random numbers the
+      verifier will pick; it gets away with it only if a guess happens to land
+      on one of a handful of unlucky values. With v rounds the chance of that is
+      at most <code class="inline">d·v / p</code>. Run it and count: 200 provers,
+      each lying about the total, each trying to bluff its way through.
     </p>
     <div class="row">
       <button class="primary" id="experiment-btn">Run 200 cheating provers</button>
@@ -146,6 +167,11 @@
       <div class="stat"><span class="value" id="exp-bound">-</span><span class="label">soundness bound d·v/p</span></div>
     </div>
     <p class="faint" id="experiment-note" style="margin:.75rem 0 0"></p>
+    <p class="faint" style="margin:.5rem 0 0">
+      This is what separates the protocol from a spot check. The guarantee is
+      not that cheating is usually caught; it is that cheating is caught unless
+      the liar wins a lottery nobody can rig.
+    </p>
   </div>
 </section>
 
@@ -171,6 +197,11 @@
       </tr></thead>
       <tbody></tbody>
     </table>
+    <p class="faint" style="margin:1rem 0 0">
+      The distance between the top line and the bottom one is the whole value of
+      the idea: it is why a proof of a large computation can be checked on
+      hardware far smaller than the machine that ran it.
+    </p>
   </div>
 </section>
 

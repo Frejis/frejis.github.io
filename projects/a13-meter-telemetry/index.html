@@ -16,10 +16,18 @@
   <p class="lede">
     A bit-packed radio frame for a smart utility meter, in the style of
     wireless M-Bus: every field laid out by hand at the bit width it actually
-    needs, checked with a CRC, and paid for out of a battery with a design
-    goal of surviving well over a decade in the field on one cell. Each
-    transmission costs battery. Smaller frames mean fewer years spent driving
-    out to replace meters.
+    needs, checked with a few extra bits that reveal damage in transit (a
+    CRC), and paid for out of a battery with a design goal of surviving well
+    over a decade in the field on one cell. Each transmission costs battery.
+    Smaller frames mean fewer years spent driving out to replace meters.
+  </p>
+  <p class="note">
+    A water meter sits in a basement with one battery that has to last more
+    than a decade. Everything it says over the radio is paid for out of that
+    battery, so the message is packed by hand, value by value, using the
+    smallest number of bits each one needs rather than a convenient round
+    number. Pack it carelessly and the meter dies years early; check it
+    carelessly and a reading damaged in transit gets filed as a real one.
   </p>
 </header>
 
@@ -40,6 +48,7 @@
 
   <div id="byte-map" class="byte-map" role="img" aria-label="Byte map of the encoded frame"></div>
   <div id="byte-legend" class="legend"></div>
+  <p class="faint" id="bytemap-result"></p>
 
   <div class="grid two controls-grid">
     <div>
@@ -75,6 +84,11 @@
       </p>
     </div>
   </div>
+
+  <p class="faint" style="margin:1rem 0 0">
+    Every bit not sent is battery not spent, and a battery that lasts is a van
+    that never gets sent out.
+  </p>
 </section>
 
 <!-- ==================================================== 2. full vs delta === -->
@@ -103,6 +117,14 @@
       </div>
     </div>
   </div>
+
+  <p class="faint" id="compare-result"></p>
+  <p class="faint" style="margin:1rem 0 0">
+    The meter already knows what it said ninety seconds ago, and so does the
+    receiver, so saying only what changed is free information — it just costs
+    the code that has to fall back to a full frame when the change is too big
+    to fit.
+  </p>
 </section>
 
 <!-- ==================================================== 3. corruption ===== -->
@@ -120,6 +142,7 @@
     <span id="corrupt-crc" class="tag"></span>
   </div>
   <div id="corrupt-decoded" class="decoded-grid"></div>
+  <p class="faint" id="corrupt-result"></p>
 
   <h3>Run many frames at a bit error rate</h3>
   <p class="muted">
@@ -139,8 +162,14 @@
     <button id="ber-reset" type="button">Reset total</button>
   </div>
   <div id="ber-stats" class="stat-strip"></div>
+  <p class="faint" id="ber-plain"></p>
   <p class="faint" id="ber-expected"></p>
   <canvas id="ber-canvas" width="1102" height="380"></canvas>
+  <p class="faint" style="margin:1rem 0 0">
+    "Silently corrupted" is the number worth caring about: the checksum catches
+    nearly every damaged frame, never quite all of them, and someone has to
+    know how wide that gap is before a billing system trusts the readings.
+  </p>
 </section>
 
 <!-- ==================================================== 4. battery ======== -->
@@ -183,9 +212,15 @@
     </div>
   </div>
 
+  <p class="faint" id="battery-result"></p>
   <p class="faint">
     Model and assumptions are stated in full in the README — this is an
     illustrative order-of-magnitude estimate, not a datasheet simulation.
+  </p>
+  <p class="faint" style="margin:1rem 0 0">
+    This is the sentence the whole project exists for: frame size and report
+    interval are the two things an engineer controls, and between them they
+    decide whether the meter outlives its warranty.
   </p>
 </section>
 

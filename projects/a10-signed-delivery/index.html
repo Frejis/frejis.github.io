@@ -21,12 +21,22 @@
   </p>
 </header>
 
+<p class="note">
+  When your computer downloads a software update, it has to answer two
+  questions before installing it: did this really come from the vendor, and
+  did anyone change it on the way? A digital signature answers both at once.
+  Without one, anyone who can sit between you and the download can hand you
+  their own file instead, and nothing on your machine would notice.
+</p>
+
 <section class="panel">
   <h2>Part 1 &middot; sign and verify a message</h2>
   <p class="muted">
-    The message below is signed with ECDSA (P-256), the same signature
-    scheme behind TLS certificates and most software update systems. Edit
-    it, sign it, then try to break the result.
+    The message below is signed with a private key that never leaves this
+    page, and checked with the matching public key anyone may hold
+    <span class="faint">(ECDSA on the P-256 curve)</span> - the same scheme
+    behind TLS certificates and most software update systems. Edit it, sign
+    it, then try to break the result.
   </p>
 
   <div class="grid two">
@@ -60,6 +70,13 @@
     </div>
     <p id="verify-explain" class="faint" style="margin:.6rem 0 0"></p>
   </div>
+
+  <p class="faint" style="margin:.9rem 0 0">
+    Each of those three buttons breaks a different half of the promise: two
+    of them change what was signed, the third asks the wrong person to
+    vouch for it. A signature is only worth anything when all three checks
+    hold at once.
+  </p>
 </section>
 
 <section class="panel">
@@ -70,6 +87,12 @@
     chain: a root you already trust vouches for an intermediate, which
     vouches for the thing you actually received. Attack any one link and
     watch the chain break exactly there - the rest keeps working.
+  </p>
+  <p class="note">
+    This is the machinery behind the padlock in a browser's address bar. The
+    browser does not know your bank; it knows a short list of organisations
+    it was shipped trusting, and follows the vouching backwards until it
+    reaches one of them.
   </p>
 
   <div class="grid side">
@@ -84,6 +107,13 @@
       </div>
     </div>
   </div>
+  <p class="faint" style="margin:1rem 0 0">
+    Note what does not happen: breaking one link leaves the others' own
+    signatures perfectly valid. Each certificate only ever promises
+    something about the key directly below it, so the failure stays where
+    it happened instead of spreading, and a browser can tell you precisely
+    which link it could not trust.
+  </p>
 </section>
 
 <footer class="page">

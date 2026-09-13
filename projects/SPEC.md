@@ -80,6 +80,46 @@ benchmark that actually runs in the page or in a test.
   Put the precise term second, in smaller text.
 - Must work at 1280px wide and degrade sanely to mobile.
 
+## Explaining it to a non-expert (required on every page)
+
+The reader is a hiring manager, a recruiter, or an engineer from another
+field. Assume they have never heard of the technique. A page that only makes
+sense to someone who already knows the subject has failed at its job, which is
+to make invisible work legible.
+
+Four things every demo must have:
+
+1. **A "why this matters" block** immediately under the page header, before any
+   control. Two or three sentences in a `.note`: what real-world problem this
+   solves, who has that problem, and what goes wrong without it. Name a
+   concrete situation, not an abstraction - "your bank stores your password"
+   beats "authentication systems". No jargon at all in this block; the precise
+   terms come later.
+
+2. **A plain-language result line after every interaction.** When the user
+   presses a button, steps a protocol, or runs a benchmark, the page must say
+   in one sentence what just happened and what it means. Not "p99 = 263 us" but
+   "the slowest 1 in 100 operations took 263 microseconds - still fast enough
+   that a trader would not notice". The number stays; the sentence explains it.
+
+3. **A "so what" payoff on every major panel.** Each section ends with one line
+   saying why that result is worth caring about. This is the sentence a reader
+   repeats to someone else, so make it the clearest one on the page.
+
+4. **Jargon is introduced, never assumed.** The first time a term appears, give
+   it in plain words with the technical name second and smaller - "a checksum
+   (CRC-16)", "reordering the sum one variable at a time (the sumcheck
+   protocol)". After that, use the real term freely.
+
+Accuracy outranks accessibility. An explanation that is simple and wrong is
+worse than one that is technical and right, so every claim must match what the
+code actually does. Do not add analogies that overstate the demo's scope, and
+do not describe a capability the project does not have.
+
+Keep it tight. This is extra prose on a page that already has a lot; prefer one
+excellent sentence to a paragraph, and never repeat the same explanation twice
+on one page.
+
 ## Voice
 
 Confident, concrete, understated. No marketing language, no emoji in code or

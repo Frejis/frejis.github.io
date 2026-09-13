@@ -287,6 +287,9 @@ function showRefusal(err) {
   $("true-answer").textContent = "—";
   $("answer-delta").textContent = err.message;
   histogramPanel.hidden = true;
+  $("answer-plain").textContent = dry
+    ? "The database just refused to answer. That refusal is the feature: enough answers, however innocent each one looks, would let someone reconstruct an individual, so the system stops before that point rather than after it."
+    : "Refused, because that sharpness costs more privacy than is left. Ask for a blurrier answer and it will be released.";
   working([
     ["requested", `ε ${err.requested.toFixed(3)}`],
     ["remaining", `ε ${err.remaining.toFixed(3)}`],
@@ -345,6 +348,9 @@ function runCurrentQuery() {
     $("true-answer").textContent = `${fmtInt(trueTotal)} total`;
     $("noisy-answer").textContent = `${fmtInt(noisyTotal)} total`;
     $("answer-delta").textContent = `across ${res.bins.length} regions`;
+    $("answer-plain").textContent =
+      `${res.bins.length} regional counts released at once for the price of one question, because every person sits in exactly ` +
+      `one region and so can only move one of the bars. True total ${fmtInt(trueTotal)}, released total ${fmtInt(noisyTotal)}.`;
     working([
       ["sensitivity of each bin", "1 person"],
       ["Laplace scale b", `1 / ${epsilon.toFixed(2)} = ${res.scale.toFixed(2)}`],
@@ -360,6 +366,13 @@ function runCurrentQuery() {
       err == null
         ? "no rows matched the filter"
         : `off by ${res.type === "count" ? fmtInt(Math.abs(err)) : fmtKr(Math.abs(err))} this time`;
+
+    $("answer-plain").textContent =
+      err == null
+        ? "No rows matched the filter, so there was nothing to release."
+        : `The true figure is ${q.format(res.trueValue)}; what left the building was ${q.format(res.noisyValue)}, ` +
+          `off by ${res.type === "count" ? fmtInt(Math.abs(err)) : fmtKr(Math.abs(err))}. That error is deliberate and is sized so that whether any one ` +
+          `particular person is in the data barely changes the answer at all.`;
 
     const rows = [
       ["rows matching the filter", `${fmtInt(res.n)} people`],
@@ -473,6 +486,10 @@ function drawExplorer(epsilon) {
 
   $("explorer-true").textContent = fmtInt(explorerTrue);
   $("explorer-spread").textContent = `${fmtInt(b10)} – ${fmtInt(b90)}`;
+  $("explorer-plain").textContent =
+    `At this setting the true answer is ${fmtInt(explorerTrue)} and eight out of ten analysts would be told something ` +
+    `between ${fmtInt(b10)} and ${fmtInt(b90)}. Drag the slider left and that range widens until the answer is useless; ` +
+    `drag it right and it narrows until one person's record starts to show through.`;
 }
 
 $("explorer-epsilon").addEventListener("input", () => {
@@ -537,6 +554,8 @@ a difference of ${r.difference} is one person's private bit, exactly.</div>
         whole query sequence is for.</p>
     `;
     $("attack-status").textContent = "attack succeeded";
+    $("attack-plain").textContent =
+      "Two totals that name nobody just revealed one named person's medical status. Nothing was hacked and no record was read: the disclosure is arithmetic.";
     return;
   }
 
@@ -556,6 +575,8 @@ the quantity being hidden is 0 or 1; the noise is ±${(1 / epsilon).toFixed(1)} 
       Repeating it to average out the noise is exactly what the budget forbids.</p>
   `;
   $("attack-status").textContent = "attack defeated (single attempt — see the curve)";
+  $("attack-plain").textContent =
+    "With the noise on, the same two questions give the attacker a number they cannot tell from a coin toss, and asking again to average the noise away is exactly what the budget stops.";
 });
 
 const ATTACK_EPSILONS = [0.02, 0.05, 0.1, 0.25, 0.5, 1, 2, 4, 8, 16];
@@ -641,8 +662,14 @@ $("attack-curve-btn").addEventListener("click", () => {
         </tr>`;
       })
       .join("");
+    const weakest = attackCurve.at(-1);
+    const strongest = attackCurve[0];
     $("attack-status").textContent =
       `${ATTACK_EPSILONS.length * ATTACK_TRIALS} attacks run in this browser just now`;
+    $("attack-plain").textContent =
+      `At ε ${strongest.epsilon} the attacker was right ${(strongest.rate * 100).toFixed(1)}% of the time, which is guessing; ` +
+      `at ε ${weakest.epsilon} they were right ${(weakest.rate * 100).toFixed(1)}%. The privacy setting is not a slogan — it moves ` +
+      `a measurable attack between useless and reliable.`;
     $("attack-curve-btn").disabled = false;
   });
 });
@@ -793,6 +820,12 @@ function renderAnalysis() {
   $("analysis-epsilon-value").textContent = epsilon.toFixed(2);
   const rows = analysisRows(epsilon);
   drawAnalysis(rows);
+  const worst = rows.reduce((a, r) =>
+    Math.abs(r.noisyValue - r.trueValue) > Math.abs(a.noisyValue - a.trueValue) ? r : a
+  );
+  $("analysis-plain").textContent =
+    `The region that came off worst is ${worst.region}, released ${fmtKr(Math.abs(worst.noisyValue - worst.trueValue))} away from the truth. ` +
+    `Whether that matters depends on the question being asked, and this is the judgement a privacy budget forces an analyst to make out loud.`;
   analysisTableBody.innerHTML = rows
     .map((r) => {
       const diff = r.noisyValue - r.trueValue;

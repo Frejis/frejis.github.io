@@ -9,6 +9,14 @@ out of two innocent aggregate queries.
 
 ## What you are looking at
 
+Epsilon, the number the budget is measured in, is a dial for how much one
+person's record is allowed to change a published answer. Set it low and one
+person barely moves the number, so the answer reveals almost nothing about them
+and is correspondingly blurry. The budget has to run out because every answer
+gives a little away, and enough answers put together can pin an individual
+down — which is precisely what the attack panel shows: with the protection off,
+two aggregate questions that name nobody reveal one named person's diagnosis.
+
 2 000 synthetic Danes with an age, a region, an income and a chronic diagnosis.
 You ask aggregate questions — how many people have the diagnosis in
 Midtjylland, what is the average income in Nordjylland — and get an answer that

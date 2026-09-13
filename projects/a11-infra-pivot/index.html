@@ -13,13 +13,18 @@
 <header class="page">
   <p class="eyebrow">portfolio / infra pivot</p>
   <h1>Infrastructure Pivot</h1>
-  <p class="lede">
-    Five servers look unrelated - until you notice they share a TLS certificate
-    and an SSH key. This walks through how analysts link infrastructure by
-    pivoting on shared technical fingerprints, and shows why some of those
-    fingerprints are damning while others mean nothing at all.
-  </p>
 </header>
+
+<p class="note">
+  When a fraud campaign is taken down, the same people are usually running
+  dozens of other servers that look unconnected. Investigators find them by
+  noticing small technical details two machines have in common - the same
+  security certificate, the same login key, the same icon in the browser tab -
+  because details like that are set up once and copied. The trap is that some
+  of those details are shared by half the internet, and treating one of those
+  as a lead buries you in servers that have nothing to do with each other.
+  Every host, address and organisation on this page is invented.
+</p>
 
 <section class="grid side">
 
@@ -36,6 +41,12 @@
         <span class="faint">click a shared trait to expand the selection</span>
       </div>
       <div id="pivotOptions" class="pivot-options"></div>
+      <p class="faint" style="margin:.8rem 0 0">
+        The tag on each option is how rare that detail is across the 90 hosts
+        <span class="faint">(its selectivity)</span>. Rare is what makes a
+        link worth believing; picking from the top of this list is the whole
+        skill.
+      </p>
     </div>
 
   </div>
@@ -50,11 +61,9 @@
           <span class="tag" id="totalCount">0 hosts</span>
         </div>
       </div>
+      <p id="pivotNarration" class="note"></p>
       <div class="honest-demo">
-        <p class="faint">
-          Not every shared trait is evidence. Pivot on something almost every
-          host has, and watch the selection fill with noise instead of leads.
-        </p>
+        <p class="faint">See what a bad pivot looks like:</p>
         <button id="weakPivotBtn" class="danger">Pivot on a common trait (watch it flood)</button>
       </div>
       <canvas id="graphCanvas" width="820" height="560"></canvas>
@@ -62,6 +71,12 @@
         Each dot is a host. A line means two hosts share at least one
         fingerprint below a near-universal threshold. Highlighted nodes are
         the current selection.
+      </p>
+      <p class="faint">
+        A tight highlighted cluster is a claim you could defend: these
+        machines were set up by the same hand. A highlight sprawling across
+        the whole canvas is the same click producing no claim at all, which
+        is why the score matters more than the count.
       </p>
     </div>
 
@@ -72,6 +87,11 @@
         <button id="resetBtn">Reset to start</button>
       </div>
       <ol id="pivotTrail" class="pivot-trail"></ol>
+      <p class="faint" style="margin:.8rem 0 0">
+        The trail is the point as much as the result: an attribution nobody
+        can retrace is an assertion, not a finding. Click any earlier step to
+        drop everything after it and see the selection as it stood then.
+      </p>
     </div>
 
   </div>

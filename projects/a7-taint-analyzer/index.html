@@ -23,6 +23,15 @@
   </p>
 </header>
 
+<section class="panel note">
+  Most break-ins start the same way: something a stranger typed into a web form
+  travels through a program and ends up somewhere it is treated as an
+  instruction rather than as text, such as a database query. A security scanner
+  is meant to find those routes before an attacker does, and normally it prints
+  a verdict and keeps its reasoning to itself. This page runs that reasoning in
+  front of you and shows the exact route it found.
+</section>
+
 <section class="panel">
   <div class="spread">
     <h2>Examples</h2>
@@ -48,10 +57,16 @@
       <button id="analyze-btn" class="primary" type="button">Analyze</button>
     </div>
     <p id="parse-error" class="note warn" hidden></p>
+    <p class="faint">
+      Green in the margin is data arriving from a stranger (a <em>source</em>);
+      red is somewhere that data is dangerous (a <em>sink</em>). The question is
+      whether anything can get from one to the other uncleaned.
+    </p>
   </div>
 
   <div class="panel">
     <h2 id="findings-heading">Findings</h2>
+    <p class="faint" id="findings-plain"></p>
     <p class="muted faint" id="findings-blurb">
       Sinks that receive tainted data without passing through a sanitizer
       first. Click a finding to highlight its witness path.
@@ -66,8 +81,19 @@
     <h2>Control-flow graph</h2>
     <p class="faint">blocks coloured by lattice state · click a finding to animate its witness path</p>
   </div>
+  <p class="faint">
+    Every route the program can take, drawn as a map (a <em>control-flow
+    graph</em>). Each box is a run of statements with no branching in it; the
+    arrows are the jumps a branch or a loop can make. The analysis has to
+    consider every route, because an attacker gets to pick which one runs.
+  </p>
   <div id="cfg-container"></div>
   <div id="cfg-legend" class="row faint" style="margin-top:.6rem;"></div>
+  <p class="faint">
+    A red box is a point in the program where tainted data is live. Click a
+    finding above and the map shows the specific route the data took to get to
+    the dangerous call.
+  </p>
 </section>
 
 <section class="panel">
@@ -75,6 +101,16 @@
     <h2>Fixed-point stepper</h2>
     <span class="faint">watch the worklist algorithm converge, one block visit at a time</span>
   </div>
+  <p class="faint">
+    The tool cannot simply read the program top to bottom, because a loop can
+    send data backwards, and a checker that naively followed the loop round
+    would never finish. This one is guaranteed to finish: what it knows about a
+    box only ever grows, there are finitely many variables to learn about, so
+    re-examining boxes until one full pass changes nothing anywhere has to run
+    out of changes. <span id="fixpoint-plain"></span> Each click below is one of
+    those re-examinations (the <em>worklist</em> algorithm reaching its
+    <em>fixed point</em>).
+  </p>
   <p class="muted">
     Each step below is one block being pulled off the worklist and
     re-processed. Its IN set is the union (join) of its predecessors' OUT
@@ -91,6 +127,10 @@
   </div>
   <input type="range" id="step-slider" min="0" max="0" value="0">
   <div id="step-detail" class="panel step-detail" style="margin-top:.8rem;"></div>
+  <p class="faint">
+    That guarantee is the reason a scanner can promise an answer on a program
+    with loops at all, rather than a timeout.
+  </p>
 </section>
 
 <section class="panel">
@@ -101,12 +141,14 @@
     <code class="inline">performance.now()</code> each time you analyze.
   </p>
   <div id="stats-grid" class="grid three" style="margin:.8rem 0;"></div>
+  <p class="faint" id="stats-plain"></p>
   <div class="row" style="margin-bottom:.6rem;">
     <button id="run-benchmark-btn" type="button">Run benchmark across examples</button>
     <span id="bench-status" class="faint"></span>
   </div>
   <canvas id="bench-canvas" width="900" height="220"></canvas>
   <div id="bench-legend" class="row faint" style="margin-top:.6rem;"></div>
+  <p class="faint" id="bench-plain"></p>
 </section>
 
 <section class="panel">
@@ -116,6 +158,11 @@
     bug) or <strong>precise</strong> (never raise a false alarm) but rarely
     both. This one is built sound-leaning: see the README for exactly where
     it over-approximates, and what it flat out cannot see.
+  </p>
+  <p class="faint">
+    In plain terms: this tool would rather warn you about something harmless
+    than stay quiet about something real. That is a deliberate choice, and it is
+    the choice every scanner has to make one way or the other.
   </p>
 </section>
 

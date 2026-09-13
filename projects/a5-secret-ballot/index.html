@@ -23,6 +23,15 @@
 </header>
 
 <section class="panel note">
+  A poll has to publish a total everyone believes while keeping each person's
+  vote private, and normally those two goals fight each other: whoever counts
+  the votes can read them. Here every vote is locked in the voter's own
+  browser, the server adds the locked votes together without ever opening one,
+  and only the final total is unlocked. What follows is that counting trick,
+  demonstrated end to end — not a complete election system.
+</section>
+
+<section class="panel note">
   This uses a cryptosystem that is <strong>additively homomorphic</strong>:
   <code class="inline">decrypt(encrypt(a) × encrypt(b)) = a + b</code>. The
   server can combine votes it cannot read into a total it can. Modulus size
@@ -47,6 +56,10 @@
     <button id="identity-run-btn" class="primary" type="button">encrypt, combine, decrypt</button>
   </div>
   <div class="identity-grid mono" id="identity-output"></div>
+  <p class="faint" id="identity-plain"></p>
+  <p class="faint">
+    Everything below is that one line repeated over real ballots.
+  </p>
 </section>
 
 <section class="panel">
@@ -66,6 +79,9 @@
     <button id="cast-vote-btn" class="primary" type="button">encrypt and cast</button>
     <span class="faint" id="cast-status"></span>
   </div>
+  <p class="faint">
+    Your browser is the last place your vote exists in a readable form.
+  </p>
 </section>
 
 <section class="panel">
@@ -86,6 +102,10 @@
       <tbody id="board-tbody"></tbody>
     </table>
   </div>
+  <p class="faint">
+    Publishing every ballot is what makes the count checkable by outsiders, and
+    publishing it is safe precisely because none of it can be read.
+  </p>
 </section>
 
 <section class="panel" id="cheat-panel">
@@ -113,6 +133,10 @@
       <div class="same-vote-grid mono" id="same-vote-output"></div>
     </div>
   </div>
+  <p class="faint">
+    Two people voting the same way leave no matching mark on the board, so the
+    board can be public without becoming a record of who agreed with whom.
+  </p>
 </section>
 
 <section class="panel" id="tally-panel">
@@ -128,6 +152,10 @@
   </div>
   <div id="tally-accumulator" class="mono"></div>
   <canvas id="tally-canvas" width="560" height="260" style="display:none;"></canvas>
+  <p class="faint">
+    The result becomes public. The votes behind it never do, not even to the
+    party running the count.
+  </p>
 </section>
 
 <section class="panel" id="verify-panel">
@@ -142,6 +170,11 @@
     <button id="corrupt-run-btn" class="danger" type="button">corrupt a ballot</button>
     <span id="verify-status" class="faint"></span>
   </div>
+  <p class="faint">
+    This is what "do not trust the counter" looks like in practice: the count is
+    a calculation any observer can repeat from public data, so the announcer's
+    word is not what the result rests on.
+  </p>
 </section>
 
 <section class="panel" id="how">
@@ -166,6 +199,7 @@
       <tbody id="bench-table-body"></tbody>
     </table>
   </div>
+  <p class="faint" id="bench-plain"></p>
 </section>
 
 <footer class="page">

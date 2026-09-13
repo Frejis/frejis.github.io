@@ -16,6 +16,7 @@ const parseErrorBox = $('parse-error');
 const findingsHeading = $('findings-heading');
 const findingsBlurb = $('findings-blurb');
 const findingsList = $('findings-list');
+const findingsPlain = $('findings-plain');
 const cfgContainer = $('cfg-container');
 const cfgLegend = $('cfg-legend');
 const stepFirstBtn = $('step-first-btn');
@@ -191,8 +192,13 @@ function renderTaintFindings(result) {
   findingsList.innerHTML = '';
   if (result.findings.length === 0) {
     findingsList.innerHTML = `<p class="note">No findings. Every path from a source to a sink passes through a sanitizer, or no source reaches a sink at all.</p>`;
+    findingsPlain.textContent =
+      'Nothing a stranger typed can reach a dangerous call here without being cleaned on the way. That verdict covers every route through the program, including the ones a test would rarely take.';
     return;
   }
+  findingsPlain.textContent =
+    `${result.findings.length} place${result.findings.length === 1 ? '' : 's'} where something a stranger typed can reach a dangerous call with nothing cleaning it on the way. ` +
+    'Click one to see the exact route, line by line.';
   result.findings.forEach((finding, idx) => {
     const div = document.createElement('div');
     div.className = 'finding';
@@ -211,6 +217,8 @@ function renderTaintFindings(result) {
 }
 
 function renderReachingFindings(result, cfg) {
+  findingsPlain.textContent =
+    'A second analysis on the same machinery: for each place a variable is given a value, which later parts of the program could still be reading that value. It answers a different question with the same engine, which is the point of writing the engine separately.';
   findingsHeading.textContent = 'Definitions';
   findingsBlurb.textContent = 'Every assignment site (a "definition"), and which blocks it can still reach without being overwritten.';
   findingsList.innerHTML = '';
@@ -445,6 +453,12 @@ function renderStats(stats, program) {
     <div class="stat"><span class="value">${stats.blocks}</span><span class="label">CFG blocks</span></div>
     <div class="stat"><span class="value">${stats.iterations}</span><span class="label">worklist steps to fixed point</span></div>
   `;
+  const piece = stats.blocks === 1 ? 'one straight-line piece' : `${stats.blocks} straight-line pieces`;
+  const visit = stats.iterations === 1 ? 'a single visit' : `${stats.iterations} visits`;
+  $('fixpoint-plain').textContent = `On the program loaded here that took ${visit}.`;
+  $('stats-plain').textContent =
+    `This program split into ${piece}, and the analysis needed ${visit} before a pass changed nothing ` +
+    `and the answer was final.`;
 }
 
 // -------------------------------------------------------------- benchmark ---
@@ -468,6 +482,12 @@ function runBenchmark() {
     });
     drawBenchChart(points);
     benchStatus.textContent = `measured ${points.length} examples just now`;
+    const hardest = points.reduce((a, b) => (b.iterations > a.iterations ? b : a));
+    const easiest = points.reduce((a, b) => (b.iterations < a.iterations ? b : a));
+    $('bench-plain').textContent =
+      `Across these ${points.length} examples the analysis settled after between ${easiest.iterations} and ` +
+      `${hardest.iterations} block visits, the worst being "${hardest.label}" at ${hardest.lines} lines. The chart plots visits against ` +
+      'program length and they do not line up: what costs the analysis is branching and loops, not lines.';
   });
 }
 runBenchmarkBtn.addEventListener('click', runBenchmark);

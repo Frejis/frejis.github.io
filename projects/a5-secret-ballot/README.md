@@ -6,8 +6,16 @@ A poll where the server adds up every vote without ever being able to read a sin
 
 ## What you are looking at
 
-Every ballot on the public bulletin board is a real Paillier ciphertext — an
-enormous integer, encrypted in your browser. The "tally without decrypting"
+The startling part first: the server adds up every vote without ever being
+able to read one. Each vote is locked in the voter's own browser, the locked
+votes are combined into a locked total, and only that total is unlocked. Every
+ballot is published in full, which is safe because none of it can be read, and
+which means anyone can repeat the count and check the announced result for
+themselves. Encrypting the same vote twice produces two completely different
+locked values, so nobody can tell from the board who voted alike.
+
+Underneath, every ballot on the public bulletin board is a real Paillier
+ciphertext — an enormous integer, encrypted in your browser. The "tally without decrypting"
 button multiplies those integers together, one ballot at a time, and only
 decrypts the four running totals at the very end. Nobody, including the
 server, ever decrypts a single vote. The identity panel at the top shows the

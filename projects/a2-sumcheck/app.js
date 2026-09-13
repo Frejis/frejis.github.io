@@ -195,7 +195,9 @@ function renderClaim(run) {
       : run.cheat === 'round'
         ? `This prover states the correct total, but intends to corrupt round ${run.cheatRound} in a way that still passes that round's check.`
         : 'The verifier could add up the table itself, but that is exactly the work it is trying to avoid.';
-  el.narration.textContent = `The prover claims the ${groups(String(run.size))} values sum to ${fmt(run.claimedSum)}. ${cheatLine}`;
+  el.narration.textContent =
+    `The prover claims the ${groups(String(run.size))} values sum to ${fmt(run.claimedSum)}. ${cheatLine} ` +
+    `Nothing has been checked yet: press Next step to make the prover defend the number one variable at a time.`;
 }
 
 function renderRound(run, rd) {
@@ -224,16 +226,16 @@ function renderRound(run, rd) {
   const unseen = run.size - 1;
   if (!rd.check.ok) {
     el.narration.textContent =
-      `The two halves do not add up to what was promised. The verifier rejects immediately, having read ${plural(2, 'number')}.`;
+      `The two halves do not add up to what was promised. The verifier rejects immediately, having read ${plural(2, 'number')} — the lie was cheap to spot because the prover could not make its own story balance.`;
   } else if (rd.tampered) {
     el.narration.textContent =
       `The prover has doctored this round so the arithmetic still balances. It passes. But it has now committed to a polynomial that does not match the real table, and it does not yet know which point r the verifier will pick.`;
   } else if (rd.index === 1) {
     el.narration.textContent =
-      `The prover splits the table in two: ${halfCount} values where ${rd.variable} = 0, ${halfCount} where ${rd.variable} = 1. The verifier adds those two numbers and gets the claimed total. It has never seen the other ${groups(String(unseen))} values.`;
+      `The prover splits the table in two: ${halfCount} values where ${rd.variable} = 0, ${halfCount} where ${rd.variable} = 1, and reports each half's total. The verifier adds those two numbers and gets the claimed total. It has now checked the claim having looked at two numbers and never seen the other ${groups(String(unseen))}.`;
   } else {
     el.narration.textContent =
-      `${rd.variable} is now the live variable and ${rd.index - 1} earlier variables are pinned to random field elements. The verifier checks one addition, picks r = ${fmtShort(rd.r)}, and the table the prover is working over halves again to ${halfCount} entries.`;
+      `${rd.variable} is now the live variable; the ${rd.index - 1} earlier ones are pinned to numbers the verifier picked at random and the prover could not have predicted. One addition passes, the verifier picks r = ${fmtShort(rd.r)}, and the prover's table halves again to ${halfCount} entries. Every round costs the verifier the same four pieces of arithmetic, however large the sum is.`;
   }
 }
 
@@ -253,10 +255,10 @@ function renderFinal(run) {
 
   if (run.accepted && run.cheat === 'none') {
     el.narration.textContent =
-      `One evaluation of g at a random point, and the verifier is convinced of a sum over ${groups(String(run.size))} values. It touched ${plural(run.ops.verifier, 'field operation')} against the prover's ${groups(String(run.ops.prover))}.`;
+      `One evaluation of g at a random point, and the verifier is convinced of a sum over ${groups(String(run.size))} values. It touched ${plural(run.ops.verifier, 'field operation')} against the prover's ${groups(String(run.ops.prover))} — it accepted the answer without ever doing the work that produced it.`;
   } else {
     el.narration.textContent =
-      `Every individual round balanced, so the cheating prover survived to the end. Then the verifier asked for g at a point nobody could have guessed, and the story fell apart. To get away with it the prover needed the challenge to hit one of at most ${run.v} bad points out of ${fmt(P)}.`;
+      `Every individual round balanced, so the cheating prover survived to the end. Then the verifier asked for g at a point nobody could have guessed, and the story fell apart. To get away with it the prover needed the challenge to hit one of at most ${run.v} bad points out of ${fmt(P)} — it had to be lucky, not clever.`;
   }
 }
 
@@ -350,9 +352,12 @@ function runExperiment() {
     el.expRate.style.color = r.rate === 1 ? 'var(--good)' : 'var(--warn)';
     el.expEscaped.textContent = `${r.escaped} / ${r.trials}`;
     el.expBound.textContent = r.bound.toExponential(2);
-    el.experimentStatus.textContent = `${r.trials} runs at v = ${v} in ${ms(dt)}`;
+    el.experimentStatus.textContent = `${r.trials} lying provers at v = ${v}, ${r.caught} rejected, in ${ms(dt)}`;
     el.experimentNote.textContent =
-      `Every one of the ${r.trials} cheating provers was caught. The theory allows an escape probability of at most ${r.bound.toExponential(2)}: about 1 in ${groups(String(Math.round(1 / r.bound)))} attempts, so seeing zero escapes in ${r.trials} runs is exactly what it predicts. A larger field makes the bound smaller; this one is small on purpose so the numbers stay readable.`;
+      (r.escaped === 0
+        ? `Every one of the ${r.trials} cheating provers was caught, each with the same handful of checks an honest one gets. `
+        : `${r.caught} of the ${r.trials} cheating provers were caught and ${r.escaped} slipped through. `) +
+      `The theory allows an escape probability of at most ${r.bound.toExponential(2)}: about 1 successful bluff in every ${groups(String(Math.round(1 / r.bound)))} attempts. A larger field makes the bound smaller; this one is small on purpose so the numbers stay readable.`;
     el.experimentBtn.disabled = false;
   }, 20);
 }

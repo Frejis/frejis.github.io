@@ -20,6 +20,14 @@
     Break it a specific way and watch exactly where and why it stops.
   </p>
   <p class="note">
+    Hospital systems send each other messages all day: a lab result, an
+    admission, a prescription. When one of them never arrives, somebody has
+    to work out where along the chain it died and why, and the systems on
+    each end rarely speak the same format. That search is the job this page
+    simulates: seven stages, and the exact one that rejected the message,
+    named.
+  </p>
+  <p class="faint" id="synthetic-note">
     Every patient name, identifier and value on this page is invented for
     the demo. The "CPR" numbers are shaped like a real Danish CPR number but
     use a placeholder sequence no real person carries — see the CPR note
@@ -38,6 +46,11 @@
   <div id="trace-strip" class="trace-strip" role="list" aria-label="Pipeline trace"></div>
   <div id="trace-detail" class="trace-detail"></div>
   <div id="trace-verdict" class="row"></div>
+
+  <p class="faint" style="margin:1rem 0 0">
+    "It failed somewhere" costs an afternoon of reading logs on both ends.
+    "It failed at validate, on this field, for this reason" costs a minute.
+  </p>
 </section>
 
 <!-- ==================================================== 2. editor + faults = -->
@@ -75,16 +88,24 @@
     CPR numbers issued from 2007 onward, so this demo only checks shape, not
     validity — see the README.
   </p>
+
+  <p class="faint" style="margin:1rem 0 0">
+    Each fault is a real thing that happens in production, and each one stops
+    at a different box — which is what makes the trace above worth trusting
+    rather than decorative.
+  </p>
 </section>
 
 <!-- ==================================================== 3. hl7 vs fhir ===== -->
 <section class="panel" id="shapes-section">
   <h2>3 · The same fact, two shapes</h2>
   <p class="muted">
-    HL7 v2 is the pipe-delimited format most Danish hospital integration
-    still runs on. FHIR is the newer JSON standard many systems are moving
-    towards. This is the same clinical fact converted between the two —
-    visible here, not just asserted in a test.
+    The same lab result written twice: on the left the older text format that
+    most Danish hospital integration still runs on, where fields are separated
+    by pipe characters (HL7 v2); on the right the newer structured format many
+    systems are moving towards (FHIR, which is JSON). Translating between them
+    is routine, unglamorous and easy to get subtly wrong, which is why it is
+    shown here rather than asserted in a test.
   </p>
   <div class="grid two shapes-grid">
     <div>
@@ -97,6 +118,12 @@
     </div>
   </div>
   <p class="faint" id="lossy-note"></p>
+
+  <p class="faint" style="margin:1rem 0 0">
+    A translation that quietly drops a value is worse than one that fails, so
+    the page states exactly which fields do not survive the round trip instead
+    of claiming none do.
+  </p>
 </section>
 
 <!-- ==================================================== 4. dead-letter ==== -->
@@ -109,10 +136,20 @@
         Fix the underlying problem and replay it — a successful replay
         clears the entry; the same mistake again leaves it queued.
       </p>
+      <p class="faint">
+        This is the tray of failed messages a human works through: read the
+        reason, correct the message, send it again. Nothing is thrown away
+        just because it was rejected.
+      </p>
     </div>
     <span class="tag" id="dlq-count"></span>
   </div>
   <div id="dlq-list" class="dlq-list"></div>
+
+  <p class="faint" style="margin:1rem 0 0">
+    A message that fails has to be recoverable by hand, or somebody's lab
+    result is simply gone and nobody knows it.
+  </p>
 </section>
 
 <!-- ==================================================== 5. throughput ===== -->
@@ -146,12 +183,19 @@
         <button type="button" id="batch-run" class="primary">Run the batch</button>
       </div>
       <div id="batch-stats" class="stat-strip"></div>
+      <p class="faint" id="batch-plain"></p>
       <p class="faint" id="batch-throughput"></p>
       <p class="faint" id="batch-scale-note"></p>
     </div>
   </div>
 
   <canvas id="batch-canvas" width="1102" height="360"></canvas>
+
+  <p class="faint" style="margin:1rem 0 0">
+    Every message ends in exactly one state and the counts add up to the total
+    — which is how you can answer "did all of today's results arrive" with a
+    number instead of a shrug.
+  </p>
 </section>
 
 <footer class="page">

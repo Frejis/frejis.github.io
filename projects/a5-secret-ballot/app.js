@@ -33,6 +33,7 @@ function fmtTime(ms) {
 const identityA = $("identity-a");
 const identityB = $("identity-b");
 const identityOutput = $("identity-output");
+const identityPlain = $("identity-plain");
 
 function runIdentityDemo() {
   const a = BigInt(Math.max(0, Math.min(999, Number(identityA.value) || 0)));
@@ -50,6 +51,10 @@ function runIdentityDemo() {
       <dt>decrypt(that)</dt><dd class="highlight">${result} — matches a + b = ${a + b}</dd>
     </dl>
   `;
+  identityPlain.textContent =
+    `In plain terms: ${a} and ${b} were each locked into a number nobody can read, ` +
+    `the two locked numbers were combined, and the combination unlocked to ${result} — ` +
+    `their sum. Arithmetic happened on data that stayed unreadable throughout.`;
 }
 
 $("identity-run-btn").addEventListener("click", runIdentityDemo);
@@ -280,7 +285,9 @@ tallyRunBtn.addEventListener("click", async () => {
 
   lastAnnounced = perOption;
   drawTallyChart(perOption);
-  tallyStatus.textContent = `tallied ${rows.length} ballots, decrypted 4 numbers total (one per option) — never a single ballot.`;
+  tallyStatus.textContent =
+    `tallied ${rows.length} ballots, decrypted ${perOption.length} numbers total (one per option) — never a single ballot. ` +
+    `The count is now public and no individual vote ever was.`;
   verifyStatus.textContent = "";
   tallyRunBtn.disabled = false;
 });
@@ -294,8 +301,8 @@ $("verify-run-btn").addEventListener("click", () => {
   }
   const result = verifyTally(board, publicKey, privateKey, lastAnnounced);
   verifyStatus.textContent = result.ok
-    ? "verified: recomputing the tally from the public board matches the announced result."
-    : `verification FAILED: option(s) ${result.mismatchOptions.map((i) => OPTIONS[i]).join(", ")} do not match the announced total (recomputed: ${result.recomputed.join(", ")}).`;
+    ? "verified: recomputing the tally from the public board matches the announced result. Anyone can do this, so the announcer does not have to be trusted."
+    : `verification FAILED: option(s) ${result.mismatchOptions.map((i) => OPTIONS[i]).join(", ")} do not match the announced total (recomputed: ${result.recomputed.join(", ")}). One tampered ballot is enough to make the published total refuse to check out.`;
   verifyStatus.className = result.ok ? "faint" : "faint tag bad";
 });
 
@@ -441,6 +448,12 @@ benchRunBtn.addEventListener("click", async () => {
   }
 
   benchStatus.textContent = `measured just now in this browser across ${BENCH_BITS.length} modulus sizes`;
+  const last = results.at(-1);
+  $("bench-plain").textContent =
+    `At ${last.bits} bits, locking one vote took ${last.encryptMs.toFixed(2)} ms while adding two ` +
+    `locked votes took ${(last.addMs * 1000).toFixed(1)} microseconds — about ` +
+    `${Math.round(last.encryptMs / last.addMs).toLocaleString()} times cheaper. That is why counting ` +
+    `millions of encrypted ballots is a realistic amount of work, even though the encryption itself is not cheap.`;
   benchRunBtn.disabled = false;
 });
 

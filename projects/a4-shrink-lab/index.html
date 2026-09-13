@@ -23,6 +23,23 @@
   </p>
 </header>
 
+<section class="panel note">
+  <p style="margin:0 0 .5rem">
+    Hand-written tests only check the cases somebody thought of, which is why
+    the bugs that reach customers are usually the odd combinations nobody
+    imagined. Throwing random inputs at the code finds those, but it hands you
+    a forty-element mess and says "this breaks it", and a developer can lose a
+    morning working out which part of the mess mattered.
+  </p>
+  <p style="margin:0">
+    The machine can do that narrowing itself: take the failing input apart,
+    keep only what is still needed to break the code, and report the cut-down
+    version. The difference between a forty-element report and a two-element
+    one is the difference between an afternoon of guessing and reading the bug
+    off the screen.
+  </p>
+</section>
+
 <!-- ------------------------------------------------ controls -->
 <section>
   <div class="panel">
@@ -85,6 +102,11 @@
       </div>
     </div>
     <p class="note" id="reduction-note" style="margin-top:1rem">-</p>
+    <p class="faint" style="margin:.75rem 0 0">
+      The right-hand input is what would go in the bug report. The parts the
+      failure did not need are gone, so what is left is close to the bug
+      itself rather than the noise it arrived in.
+    </p>
   </div>
 </section>
 
@@ -111,6 +133,10 @@
         <tbody id="shrink-tbody"></tbody>
       </table>
     </div>
+    <p class="faint" style="margin:1rem 0 0">
+      This search is the part of a property-based tester nobody ever sees, and
+      it is what makes random testing usable rather than merely noisy.
+    </p>
   </div>
 </section>
 
@@ -125,6 +151,11 @@
     </p>
     <canvas id="dist-chart" width="1100" height="220"></canvas>
     <p class="faint" id="dist-note" style="margin-top:.5rem">Run the test above to populate this.</p>
+    <p class="faint" style="margin:.5rem 0 0">
+      A test suite is only as good as the inputs it actually reaches. If the
+      generator never produces long lists, no amount of runs will find a bug
+      that needs one.
+    </p>
   </div>
 </section>
 
@@ -144,6 +175,11 @@
     </div>
     <canvas id="bench-chart" width="1100" height="240" style="margin-top:1rem"></canvas>
     <p class="faint" id="bench-note" style="margin-top:.5rem"></p>
+    <p class="faint" style="margin:.5rem 0 0">
+      This is how you pick a run budget on purpose rather than by habit: the
+      spread above says how many inputs a suite has to try before missing this
+      bug stops being likely.
+    </p>
   </div>
 </section>
 

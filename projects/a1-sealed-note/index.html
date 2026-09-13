@@ -22,10 +22,21 @@
 </header>
 
 <section class="panel note">
-  The key never leaves your browser. It travels to the recipient inside the
-  <strong>URL fragment</strong> (the part after <code class="inline">#</code>),
-  which browsers never send to a server. The server only ever stores and
-  serves ciphertext — see the table on the right.
+  <p style="margin:0 0 .5rem">
+    Almost every service you send a message through can read it: the company
+    holds the keys, so a support agent, a court order or a break-in can open
+    your data. Here the server is never given the key, so there is nothing it
+    could hand over and nothing a thief could take from it. And if anyone with
+    access to that server edits a stored note, the reader gets a refusal
+    instead of a quietly altered message.
+  </p>
+  <p style="margin:0">
+    The key never leaves your browser. It travels to the recipient inside the
+    part of the link after the <code class="inline">#</code> (the
+    <strong>URL fragment</strong>), which browsers never send to a server. The
+    server only ever stores and serves scrambled bytes (ciphertext) — see the
+    table on the right.
+  </p>
 </section>
 
 <section class="grid two">
@@ -47,6 +58,7 @@
     </div>
 
     <div id="upload-result" hidden style="margin-top:1rem;">
+      <p class="note" id="encrypt-note" style="margin:0 0 .8rem"></p>
       <div class="grid two">
         <div>
           <label>AES-256 key (never sent to the server)</label>
@@ -84,6 +96,10 @@
     </p>
     <div id="server-stats" class="grid three" style="margin:.8rem 0;"></div>
     <div id="server-rows" class="row-list"></div>
+    <p class="faint" id="server-note" style="margin:.75rem 0 0;">
+      This is the worst case for the user: everything an attacker gets by
+      stealing the whole database. None of it is the note.
+    </p>
   </div>
 
 </section>
@@ -99,6 +115,7 @@
     <button id="open-link-btn" class="primary" type="button">Open</button>
   </div>
   <div id="decrypt-result" class="result-box panel mono" hidden style="margin-top:.8rem;"></div>
+  <p class="faint" id="decrypt-note" style="margin:.6rem 0 0;" hidden></p>
   <p class="faint" style="margin-top:.6rem;">
     Want to see the failure path? Expand a row on the right, click
     <strong>tamper with ciphertext</strong>, then open that row's link again —
@@ -119,6 +136,7 @@
     <button id="run-benchmark-btn" class="primary" type="button">Run benchmark</button>
     <span id="bench-status" class="faint"></span>
   </div>
+  <p class="note" id="bench-note" style="margin:.6rem 0 1rem" hidden></p>
   <div class="grid two">
     <canvas id="bench-canvas" width="480" height="260"></canvas>
     <table class="bench-table">
@@ -126,6 +144,10 @@
       <tbody id="bench-table-body"></tbody>
     </table>
   </div>
+  <p class="faint" style="margin:.75rem 0 0;">
+    Encryption this cheap is why nobody has to choose between a service that
+    works and one that cannot read their data.
+  </p>
 </section>
 
 <footer class="page">

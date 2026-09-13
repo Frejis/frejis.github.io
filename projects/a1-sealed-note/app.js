@@ -22,6 +22,7 @@ const genIvOut = $("gen-iv-out");
 const shareLinkOut = $("share-link-out");
 const copyLinkBtn = $("copy-link-btn");
 const uploadResult = $("upload-result");
+const encryptNote = $("encrypt-note");
 
 const serverRows = $("server-rows");
 const serverStats = $("server-stats");
@@ -30,11 +31,13 @@ const clearServerBtn = $("clear-server-btn");
 const recipientLinkInput = $("recipient-link-input");
 const openLinkBtn = $("open-link-btn");
 const decryptResult = $("decrypt-result");
+const decryptNote = $("decrypt-note");
 
 const runBenchmarkBtn = $("run-benchmark-btn");
 const benchCanvas = $("bench-canvas");
 const benchTableBody = $("bench-table-body");
 const benchStatus = $("bench-status");
+const benchNote = $("bench-note");
 
 const SAMPLE_SECRET =
   "AWS_SECRET_ACCESS_KEY = wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY\n" +
@@ -133,10 +136,16 @@ encryptBtn.addEventListener("click", async () => {
     genKeyOut.textContent = keyB64;
     genIvOut.textContent = iv;
     shareLinkOut.value = link;
+    encryptNote.textContent =
+      `Your note was scrambled here in the browser and only the scrambled form was uploaded: ` +
+      `that is the new top row on the right. The key below was made for this one note and exists ` +
+      `in two places only — this tab, and the link. Whoever holds the link can read the note; the ` +
+      `server cannot.`;
     uploadResult.hidden = false;
     renderServer();
   } catch (err) {
     uploadResult.hidden = false;
+    encryptNote.textContent = "Nothing was uploaded: the browser could not complete the encryption.";
     genKeyOut.textContent = "";
     genIvOut.textContent = "";
     shareLinkOut.value = "";
@@ -163,6 +172,7 @@ async function openLink(href) {
   decryptResult.hidden = false;
   decryptResult.className = "result-box panel mono";
   decryptResult.textContent = "decrypting…";
+  decryptNote.hidden = true;
   try {
     const { id, keyB64 } = parseShareLink(href);
     const row = server.get(id); // burn-after-reading deletes here if flagged
@@ -171,18 +181,30 @@ async function openLink(href) {
       decryptResult.className = "result-box panel mono error";
       decryptResult.textContent =
         "No such note on the server. It may already have been read once (burn-after-reading) or never existed.";
+      decryptNote.hidden = false;
+      decryptNote.textContent =
+        "Nothing came back, because there is no row left to read. A note set to burn is deleted by the " +
+        "server the first time it is opened, so a second reader gets this.";
       return;
     }
     const key = await importKeyRaw(keyB64);
     const plaintext = await decryptText(key, row.ciphertext, row.iv);
     decryptResult.className = "result-box panel mono ok";
     decryptResult.textContent = plaintext;
+    decryptNote.hidden = false;
+    decryptNote.textContent =
+      "The link supplied the key, the server supplied the scrambled bytes, and the two were put " +
+      "together in this tab. The text above was never present on the server in readable form.";
   } catch (err) {
     decryptResult.className = "result-box panel mono error";
     decryptResult.textContent =
       "Decryption failed: authentication check did not pass. The ciphertext is wrong, tampered, " +
       "or the key does not match. GCM refuses to hand back plaintext when this happens — " +
       `it never silently returns garbage. (${err.message || err})`;
+    decryptNote.hidden = false;
+    decryptNote.textContent =
+      "That refusal is the point. Someone who can reach the stored row can destroy your note, but " +
+      "they cannot change one word of it and have the reader believe it.";
   }
 }
 
@@ -303,6 +325,13 @@ runBenchmarkBtn.addEventListener("click", async () => {
     }
     drawChart(results);
     benchStatus.textContent = `measured just now in this browser, ${results.length} payload sizes`;
+    const biggest = results.at(-1);
+    const smallest = results[0];
+    benchNote.hidden = false;
+    benchNote.textContent =
+      `A note-sized payload of ${fmtBytes(smallest.size)} was encrypted in ${smallest.ms.toFixed(3)} ms on this machine, ` +
+      `and ${fmtBytes(biggest.size)} took ${biggest.ms.toFixed(0)} ms — ${biggest.throughput.toFixed(0)} megabytes a second. ` +
+      `Keeping the server unable to read your data costs the user nothing they could notice.`;
   } catch (err) {
     benchStatus.textContent = `benchmark failed: ${err.message || err}`;
   } finally {

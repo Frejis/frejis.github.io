@@ -82,10 +82,13 @@
    track and forcing horizontal page overflow — same trap SPEC.md calls out. */
 .shapes-grid { min-width: 0; }
 .shapes-grid > div { min-width: 0; }
+/* HL7 lines run past the column; wrap rather than clip, so nothing is cut off
+   inside the box (min-width: 0 above already keeps it out of the grid track) */
 .shape-view {
   max-height: 320px;
   overflow: auto;
-  white-space: pre;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
   font-size: .78rem;
 }
 
@@ -123,3 +126,4 @@
 @media (max-width: 900px) {
   .trace-box { min-width: 4.4rem; font-size: .78rem; }
 }
+

@@ -7,6 +7,12 @@ the verifier looks at exactly one of them.
 
 ## What you are looking at
 
+The problem is one anybody who has ever outsourced work has: you pay a machine
+to run a computation too big for yours, it sends back an answer, and checking
+that answer the obvious way means doing the whole job yourself. So in practice
+you trust it — and a machine that is broken, overcharging or lying looks exactly
+like one that is working.
+
 The sumcheck protocol is a conversation. One side (the prover) has done a huge
 computation and states the answer. The other side (the verifier) cannot afford to
 redo that computation, so instead it asks a short sequence of questions, each

@@ -8,6 +8,13 @@ well over a decade in the field on one cell.
 
 ## What you are looking at
 
+A water meter in a basement has one battery that has to last more than a
+decade, and every byte it puts on the radio is paid for out of it. So the
+message is packed by hand, value by value, at the smallest number of bits each
+one needs rather than a convenient round number, and carries a few extra bits
+that let the receiver tell whether it arrived intact (a checksum). This page
+makes both visible.
+
 A reading — meter ID, timestamp, cumulative volume, flow rate, battery level,
 five alarm flags — packed by hand into 13 bytes plus a 2-byte CRC, field by
 field, at

@@ -6,6 +6,10 @@ What actually makes a digitally signed message trustworthy, and what does it tak
 
 ## What you are looking at
 
+A digital signature answers two questions at once: did this come from who it
+claims to, and has anyone changed it since. This page demonstrates both by
+taking them away.
+
 Part 1 signs a message with a real ECDSA key using the browser's own
 WebCrypto, then lets you break the result three different ways: change the
 message, change the signature, or check it against the wrong person's key.

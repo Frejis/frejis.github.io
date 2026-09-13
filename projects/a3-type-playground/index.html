@@ -20,6 +20,22 @@
   </p>
 </header>
 
+<section class="panel note">
+  <p style="margin:0 0 .5rem">
+    A great deal of software breaks in production for a dull reason: some value
+    was text where the code expected a number, or a list where it expected one
+    item. The mismatch was there the whole time, and nobody noticed until a
+    customer did.
+  </p>
+  <p style="margin:0">
+    A checker can find those before the program ever runs, and it can do it
+    without anyone writing down what kind of value each name holds — it works
+    that out from how the name is used, and refuses the program if the answers
+    contradict each other. The technical name is type inference. Below, that
+    normally invisible reasoning is shown one step at a time.
+  </p>
+</section>
+
 <section>
   <div class="row" id="examples" role="group" aria-label="Example programs"></div>
   <p class="faint" id="example-note">Pick an example, or write your own.</p>
@@ -36,6 +52,7 @@
         <span class="label">and evaluates to</span>
         <span class="value" id="program-value">&mdash;</span>
       </div>
+      <p class="faint" id="headline-note" style="margin:0"></p>
     </div>
 
     <div class="panel" id="error-panel" hidden>
@@ -53,6 +70,10 @@
         <tbody id="bindings"></tbody>
       </table>
       <p class="faint" id="bindings-empty" hidden>This program has no named bindings.</p>
+      <p class="faint" style="margin:.75rem 0 0">
+        Nobody typed any of this column. Every entry was deduced, and any
+        entry that could not be deduced would have stopped the program instead.
+      </p>
     </div>
   </div>
 
@@ -81,11 +102,17 @@
         <span class="faint" id="trace-count"></span>
       </div>
       <p class="faint">
-        Algorithm W walks the program, invents a fresh variable for anything it does not know yet,
-        collects equations between types, and solves them. Every line below is one real step.
+        The checker reads the program, invents a placeholder for anything it does not know yet,
+        collects the facts each use of a name forces, and solves them (Algorithm W). Every line
+        below is one real step, not a summary.
       </p>
       <ol class="trace" id="trace"></ol>
       <p class="faint" id="trace-empty" hidden>No steps to show: the program failed before inference got going.</p>
+      <p class="faint" style="margin:.75rem 0 0">
+        A compiler does this on every build and throws it away. Read down the
+        list and you can see exactly which line forced which conclusion — which
+        is what turns a type error from an obstacle into an explanation.
+      </p>
     </div>
   </div>
 </section>

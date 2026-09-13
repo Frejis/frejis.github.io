@@ -99,13 +99,13 @@ function showStageDetail(stageName, entry) {
 function renderVerdict(outcome) {
   const el = $("trace-verdict");
   if (outcome.terminalState === "delivered") {
-    el.innerHTML = `<span class="tag good">delivered</span><span>Delivered to ${outcome.destination}. Every stage passed.</span>`;
+    el.innerHTML = `<span class="tag good">delivered</span><span>All seven stages passed and the result reached ${outcome.destination}. Nothing for anyone to chase.</span>`;
   } else if (outcome.terminalState === "duplicate") {
     const entry = outcome.trace.at(-1);
-    el.innerHTML = `<span class="tag warn">duplicate, not re-delivered</span><span>${entry.reason} — this is idempotency working correctly, not a bug: the message is not delivered a second time and the delivered count does not increase.</span>`;
+    el.innerHTML = `<span class="tag warn">duplicate, not re-delivered</span><span>${entry.reason} — this message has been sent before, so it is recognised and stopped here rather than delivered again. That is the point: the patient must not end up with two copies of one lab result. Handling a repeat safely is called idempotent delivery.</span>`;
   } else {
     const entry = outcome.trace.find((t) => !t.pass);
-    el.innerHTML = `<span class="tag bad">rejected at ${STAGE_INFO[entry.stage].label.toLowerCase()}</span><span>This message never reached the destination system because ${entry.reason}.</span>`;
+    el.innerHTML = `<span class="tag bad">rejected at ${STAGE_INFO[entry.stage].label.toLowerCase()}</span><span>This message never reached the destination system because ${entry.reason}. In production this is the point where someone would otherwise be reading logs on two systems to find out what you can read here in one line.</span>`;
   }
 }
 
@@ -394,10 +394,18 @@ function setupThroughput() {
     const summary = summarizeBatch(results);
     const totalAccounted = Object.values(summary).reduce((a, b) => a + b, 0);
 
+    const rejected = totalAccounted - (summary.delivered ?? 0) - (summary.duplicate ?? 0);
+    $("batch-plain").textContent =
+      `Of ${totalAccounted.toLocaleString()} messages pushed through with this fault mix, ` +
+      `${(summary.delivered ?? 0).toLocaleString()} arrived at a downstream system, ` +
+      `${rejected.toLocaleString()} were stopped by a stage that found something wrong with them, ` +
+      `and ${(summary.duplicate ?? 0).toLocaleString()} were repeats that were recognised and not ` +
+      `delivered twice. None went missing unaccounted for.`;
+
     $("batch-stats").innerHTML = `
       <div class="stat"><span class="value">${(summary.delivered ?? 0).toLocaleString()}</span><span class="label">delivered</span></div>
       <div class="stat"><span class="value">${(summary.duplicate ?? 0).toLocaleString()}</span><span class="label">duplicate</span></div>
-      <div class="stat"><span class="value">${(totalAccounted - (summary.delivered ?? 0) - (summary.duplicate ?? 0)).toLocaleString()}</span><span class="label">rejected</span></div>
+      <div class="stat"><span class="value">${rejected.toLocaleString()}</span><span class="label">rejected</span></div>
       <div class="stat"><span class="value">${totalAccounted.toLocaleString()}</span><span class="label">total accounted for</span></div>
     `;
 

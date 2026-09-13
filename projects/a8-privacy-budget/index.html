@@ -22,6 +22,16 @@
   </p>
 </header>
 
+<section class="panel note">
+  A hospital or a statistics office wants to publish useful numbers — how many
+  people in this region have this diagnosis — without revealing anything about
+  any one patient. Removing names is not enough: a few harmless-looking totals,
+  subtracted from each other, can pin a single person down. The fix is to blur
+  every answer by a measured amount and to keep count of how much has been
+  given away, because each answer leaks a little and enough of them add up to a
+  name.
+</section>
+
 <section class="panel budget-hero">
   <div class="spread">
     <h2>Privacy budget</h2>
@@ -54,6 +64,11 @@
     <tbody id="ledger-body"></tbody>
   </table>
   <p id="ledger-empty" class="faint">No queries yet. Run one below and the bar starts draining.</p>
+  <p class="faint">
+    The bar is the whole idea in one control: privacy is not a property of one
+    answer, it is a property of every answer you will ever give, so it has to be
+    rationed and the rationing has to be able to say no.
+  </p>
 </section>
 
 <section class="grid side">
@@ -107,6 +122,11 @@
     </label>
     <input type="range" id="epsilon" min="0.01" max="5" step="0.01" value="0.5">
     <div class="scale-ends faint"><span>0.01 — near-perfect privacy, useless answers</span><span>5 — sharp answers, weak privacy</span></div>
+    <p class="faint">
+      Epsilon is the dial for how much one person's record is allowed to change
+      the published answer. Low means one person barely moves it, so the answer
+      keeps almost nothing about them and is correspondingly blurry.
+    </p>
 
     <div class="row" style="margin-top:1rem;">
       <button id="run-query-btn" class="primary" type="button">Run the query</button>
@@ -147,6 +167,12 @@
     </table>
 
     <p id="clamp-note" class="note warn" hidden></p>
+    <p class="faint" id="answer-plain"></p>
+    <p class="faint">
+      An analyst gets a number that is close enough to work with and that no
+      individual can be picked out of. That gap between the two columns is not a
+      defect, it is the protection.
+    </p>
   </div>
 
 </section>
@@ -180,6 +206,7 @@
     </div>
     <canvas id="explorer-canvas" width="760" height="300"></canvas>
   </div>
+  <p class="faint" id="explorer-plain"></p>
 </section>
 
 <section class="panel attack-panel" id="attack-panel">
@@ -203,6 +230,12 @@
     <span id="attack-status" class="faint"></span>
   </div>
 
+  <p class="faint">
+    Nobody is named, no record is read, and no rule is broken. Subtracting one
+    total from the other still leaves exactly one person's yes-or-no answer,
+    which is why blurring every answer is not paranoia.
+  </p>
+
   <div id="attack-result" class="attack-result" hidden></div>
 
   <div class="grid two" style="margin-top:1rem;">
@@ -218,6 +251,7 @@
       <tbody id="attack-table-body"></tbody>
     </table>
   </div>
+  <p class="faint" id="attack-plain"></p>
 </section>
 
 <section class="panel">
@@ -238,6 +272,11 @@
     </table>
   </div>
   <p id="bench-status" class="faint"></p>
+  <p class="faint">
+    The cost of the protection is a knowable, publishable quantity rather than a
+    vague promise, which is what lets an analyst state how far off their finding
+    might be.
+  </p>
 </section>
 
 <section class="panel">
@@ -259,6 +298,7 @@
     <thead><tr><th>Region</th><th class="num">People</th><th class="num">True mean income</th><th class="num">Released</th><th class="num">Difference</th></tr></thead>
     <tbody id="analysis-table-body"></tbody>
   </table>
+  <p class="faint" id="analysis-plain"></p>
 </section>
 
 <footer class="page">

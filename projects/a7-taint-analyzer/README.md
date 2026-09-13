@@ -6,6 +6,14 @@ A static analyzer that proves untrusted input reaches a dangerous sink — and s
 
 ## What you are looking at
 
+This is what a security scanner does, with the reasoning that is normally
+invisible drawn on screen. The tool follows data that came from a stranger — a
+web request — through the program, and warns when it reaches somewhere
+dangerous, such as a database query, without being cleaned on the way. The
+stepper at the bottom shows why that is not a simple read-through: a loop can
+carry data backwards, so the analysis re-examines the program repeatedly until
+a whole pass changes nothing, and that is when the answer is final.
+
 Paste a snippet of a small JS-like language in on the left. The tool parses
 it, builds a control-flow graph, and runs a fixed-point dataflow analysis
 that tracks which variables are "tainted" (derived from untrusted input like

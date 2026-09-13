@@ -8,6 +8,13 @@ exactly which one rejected it and why.
 
 ## What you are looking at
 
+Hospital systems send each other messages all day — a lab result, an
+admission, a prescription — and when one goes missing somebody has to work out
+where along the chain it died. That search is the job this demo simulates. The
+two ends usually speak different formats: HL7 v2 is the older text format
+hospitals actually run on, FHIR is the modern JSON one, and translating
+between them is routine, unglamorous and easy to get subtly wrong.
+
 A clinical message — patient, an ordered test, a result — modelled on the
 formats Danish hospital integration actually runs on: HL7 v2's pipe-delimited
 segments, and the FHIR JSON resources many systems are moving towards. It

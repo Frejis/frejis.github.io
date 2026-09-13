@@ -22,6 +22,15 @@
   </p>
 </header>
 
+<p class="note">
+  An exchange is a queue. Buyers and sellers post the price they will accept,
+  and the exchange pairs them off: best price first, and between two people
+  offering the same price, whoever got there first. The part that decides
+  whether such a system is usable is not how fast it usually is - it is how
+  bad the occasional slow moment gets, because that is the moment a price
+  moves while somebody is still waiting.
+</p>
+
 <!-- ------------------------------------------------ book + controls -->
 <section>
   <div class="grid side">
@@ -32,6 +41,12 @@
         <span class="tag" id="spread-tag">spread —</span>
       </div>
       <div id="ladder" class="ladder"></div>
+      <p class="faint" style="margin:.75rem 0 0">
+        Sellers stack above, buyers below, and the gap between the best of
+        each is the spread. An order priced into that gap sits and waits; an
+        order priced across it trades immediately against whoever has been
+        queued longest at the best price.
+      </p>
     </div>
 
     <div>
@@ -99,6 +114,11 @@
       <button id="reset-btn">Reset book</button>
       <span class="faint" id="run-status">the book below is preloaded and ready to poke at</span>
     </div>
+    <p class="faint" style="margin:.85rem 0 0">
+      Fifty thousand orders is the smallest run that produces enough rare
+      events to say anything about the rare events. A handful of orders can
+      only ever tell you about the typical case.
+    </p>
   </div>
 </section>
 
@@ -139,7 +159,21 @@
         <div class="stat"><span class="value" id="stat-max">—</span><span class="label">worst batch avg (µs/op)</span></div>
       </div>
     </div>
+    <p class="faint" style="margin-top:.75rem">
+      Reading the labels: p50 is the middle - half of everything measured was
+      faster than that. p99 means 99 out of every 100 were faster, and p99.9
+      means 999 out of every 1000 were. A microsecond (µs) is a millionth of
+      a second. Here each measurement is one batch's average rather than one
+      operation, for the reason above, so these are the middle and the tail
+      of the batches.
+    </p>
     <p class="faint" id="latency-note" style="margin-top:.75rem">Run the order flow above to populate this.</p>
+    <p class="faint">
+      Quoting the average here would hide the entire right-hand side of this
+      chart, and the right-hand side is the part that costs money. Building
+      the measurement so the tail survives it - and labelling honestly what
+      the browser's clock will and will not let you see - is the work.
+    </p>
   </div>
 </section>
 

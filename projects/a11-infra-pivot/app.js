@@ -26,6 +26,7 @@ const pivotOptionsEl = document.getElementById("pivotOptions");
 const pivotTrailEl = document.getElementById("pivotTrail");
 const selectedCountEl = document.getElementById("selectedCount");
 const totalCountEl = document.getElementById("totalCount");
+const narrationEl = document.getElementById("pivotNarration");
 const weakPivotBtn = document.getElementById("weakPivotBtn");
 const resetBtn = document.getElementById("resetBtn");
 
@@ -150,6 +151,33 @@ function renderPivotTrail() {
   });
 }
 
+// One plain sentence for what the last click actually did. The tier - not the
+// number of hosts added - decides whether it reads as a lead or as noise.
+function renderNarration() {
+  const last = session.steps[session.steps.length - 1];
+  if (!last) {
+    narrationEl.textContent =
+      `Start here: one host, nothing linked to it yet. Pick a trait below and every host sharing it joins the selection.`;
+    return;
+  }
+  const meta = FIELD_LABELS[last.field];
+  const { count, total, tier } = last.selectivity;
+  const added = last.addedIds.length;
+  const verdict = count <= 1
+    ? `No other host out of ${total} carries that value, so it links this machine to nothing - a dead end rather than a lead.`
+    : tier === "strong"
+      ? `Only ${count} of ${total} hosts carry that value, so two machines having it is hard to explain as coincidence - this is a lead.`
+      : tier === "moderate"
+        ? `${count} of ${total} hosts carry it. Worth noting, not enough on its own; corroborate it with a second, rarer trait.`
+        : `${count} of ${total} hosts carry it, which is most of the dataset - that is something everyone happens to share, not a link between these machines.`;
+  const outcome = added === 0
+    ? `Nothing new joined: every host with that value was already selected.`
+    : `${added} host${added === 1 ? "" : "s"} joined the selection.`;
+  narrationEl.innerHTML =
+    `<span class="tag ${tierTagClass(tier)}">${escapeHtml(tier)}</span> ` +
+    `Pivoted on "${escapeHtml(meta.label)}". ${outcome} ${verdict}`;
+}
+
 function renderCounts() {
   selectedCountEl.textContent = `${session.selected.length} selected`;
   totalCountEl.textContent = `${hosts.length} hosts`;
@@ -159,6 +187,7 @@ function render() {
   renderHostDetail();
   renderPivotOptions();
   renderPivotTrail();
+  renderNarration();
   renderCounts();
 }
 

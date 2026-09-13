@@ -190,7 +190,9 @@ function setupEcb() {
       <div class="stat"><span class="value">${repeats.toLocaleString()}</span><span class="label">repeated ciphertext blocks</span></div>
       <div class="stat"><span class="value">${elapsed.toFixed(0)} ms</span><span class="label">to encrypt twice</span></div>
     `;
-    status.textContent = "done — the ECB panel is real AES output";
+    status.textContent =
+      `${repeats.toLocaleString()} of the ${blocks.toLocaleString()} encrypted chunks are exact duplicates of an earlier one, ` +
+      `which is why the picture survives: that is real AES output, not a filter.`;
     setTimeout(() => { progress.hidden = true; }, 400);
   };
 
@@ -323,9 +325,10 @@ function setupPad() {
       <div class="stat"><span class="value">${((hits / total) * 100).toFixed(1)}%</span><span class="label">characters recovered</span></div>
       <div class="stat"><span class="value">${elapsed.toFixed(0)} ms</span><span class="label">without the key</span></div>
     `;
+    const pct = ((hits / total) * 100).toFixed(1);
     status.textContent = count >= 6
-      ? "recovered — green is correct, red is where the model guessed wrong"
-      : "recovered — with few ciphertexts there is less evidence per byte";
+      ? `${pct}% of the characters of all ${count} messages were read back without the key, purely because one nonce was reused. Green is correct, red is where the model guessed wrong.`
+      : `${pct}% recovered from only ${count} intercepted messages — fewer messages means less evidence per byte, so raise the slider and the text sharpens.`;
     runBtn.disabled = false;
     setTimeout(() => { progress.hidden = true; }, 400);
   };
@@ -551,7 +554,9 @@ function setupExtend() {
         the same trick produces nothing.
       </p>
     `;
-    status.textContent = accepted ? "forged" : "wrong length, try another";
+    status.textContent = accepted
+      ? `forged — the server will accept "${suffixInput.value}" as something it signed itself`
+      : "rejected — that secret length was the wrong guess, so an attacker tries the next one";
   };
 
   for (const el of [messageInput, suffixInput, lenInput]) {

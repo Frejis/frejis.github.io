@@ -20,6 +20,7 @@ const el = {
   valBreakdown: $("val-breakdown"),
   valBar: $("val-bar"),
   compressionNote: $("compression-note"),
+  compressionPlain: $("compression-plain"),
 
   windowSelect: $("window-select"),
   chartWindowNote: $("chart-window-note"),
@@ -28,6 +29,7 @@ const el = {
   chartThroughput: $("chart-throughput"),
   chartLight: $("chart-light"),
   chartCrc: $("chart-crc"),
+  chartPlain: $("chart-plain"),
 
   faultDegradeBtn: $("fault-degrade-btn"),
   faultCrcBtn: $("fault-crc-btn"),
@@ -43,6 +45,7 @@ const el = {
   queryPort: $("query-port"),
   queryBtn: $("query-btn"),
   queryResults: $("query-results"),
+  queryPlain: $("query-plain"),
 };
 
 const groups = (n) => String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g, "\u2009");
@@ -109,6 +112,12 @@ function renderCompressionResult(r) {
     : "not enough samples to measure.";
   el.valBar.style.width = `${valFrac !== null ? (valFrac * 100).toFixed(1) : 0}%`;
 
+  el.compressionPlain.textContent = bytesPerSample !== null && ratio !== null
+    ? `Each reading was stored in ${bytesPerSample.toFixed(2)} bytes instead of the ${NAIVE_BYTES_PER_SAMPLE} ` +
+      `a plain fixed-width record would spend — ${(ratio * 100).toFixed(1)}% of the naive size, so a year of ` +
+      `history fits in roughly the disk a few months of it would otherwise need.`
+    : "not enough samples to measure.";
+
   el.compressionTag.textContent = `${groups(r.totalSamples)} samples across ${HEADLINE_TOPOLOGY.nodeCount * HEADLINE_TOPOLOGY.portsPerNode} ports \u00d7 5 metrics`;
   el.compressionTag.className = "tag good";
 
@@ -121,12 +130,11 @@ function renderCompressionResult(r) {
   const perPortPerDay = Math.round(86400000 / HEADLINE_TOPOLOGY.intervalMs) * 5;
   const fleetPerDay = perPortPerDay * HEADLINE_TOPOLOGY.nodeCount * HEADLINE_TOPOLOGY.portsPerNode;
   el.compressionNote.textContent =
-    `Measured just now, live, on this generated fleet: ${groups(r.totalBytes)} bytes stored for ` +
-    `${groups(r.totalSamples)} samples that a naive fixed-width record would need ${groups(r.totalNaiveBytes)} ` +
-    `bytes for (${naivePerSample} bytes/sample). That is ${bytesPerSample !== null ? bytesPerSample.toFixed(2) : "?"} ` +
-    `bytes/sample here — ${groups(perPortPerDay)} measurements a day per port at this sampling interval, ` +
-    `${groups(fleetPerDay)} a day across this fleet's ${HEADLINE_TOPOLOGY.nodeCount * HEADLINE_TOPOLOGY.portsPerNode} ports, ` +
-    `stored in a fraction of the space, and every one of them still answerable by a range query below.`;
+    `Totals behind those two bars: ${groups(r.totalBytes)} bytes stored for ${groups(r.totalSamples)} samples ` +
+    `that a naive ${naivePerSample}-byte record would need ${groups(r.totalNaiveBytes)} bytes for. At this ` +
+    `sampling interval that is ${groups(perPortPerDay)} measurements a day per port, ${groups(fleetPerDay)} a ` +
+    `day across this fleet's ${HEADLINE_TOPOLOGY.nodeCount * HEADLINE_TOPOLOGY.portsPerNode} ports, every one ` +
+    `still answerable by a range query below.`;
 }
 
 el.streamBtn.addEventListener("click", () => {
@@ -398,6 +406,13 @@ function renderLiveCharts() {
 
   el.chartWindowNote.textContent = `window: ${new Date(from).toISOString().slice(11, 16)}\u2013${new Date(to).toISOString().slice(11, 16)} UTC (${groups(windowMs / 60000)} min) \u00b7 ${throughputQ.downsampled ? "downsampled" : "raw points"}`;
 
+  el.chartPlain.textContent = throughputQ.downsampled
+    ? `A window this long holds more readings than the chart has pixels, so the store returns ` +
+      `${groups(throughputQ.points.length)} summarised buckets — each one the smallest, largest and ` +
+      `average reading in its slice — rather than every raw point.`
+    : `Showing ${groups(throughputQ.points.length)} readings exactly as they were recorded; this window ` +
+      `is short enough that nothing has to be summarised away.`;
+
   renderRateCharts(from, to, col);
   renderAnomalyStatus(lightQ.points);
 }
@@ -535,10 +550,15 @@ function runQuery() {
   if (port !== undefined) matcher.port = port;
 
   const matches = live.store.seriesList().filter((s) => matchLabels(s, matcher));
+  const total = live.store.seriesList().length;
   if (matches.length === 0) {
     el.queryResults.innerHTML = `<p class="faint">No series match that matcher.</p>`;
+    el.queryPlain.textContent = `Nothing out of the ${total} stored streams matches those conditions.`;
     return;
   }
+  el.queryPlain.textContent =
+    `That picked out ${matches.length} of the ${total} stored streams — the store looks them up by ` +
+    `their labels, so asking for one device's ports does not mean reading everything it ever recorded.`;
   el.queryResults.innerHTML = matches
     .map((s) => {
       const last = s.samples[s.samples.length - 1];

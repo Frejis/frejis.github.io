@@ -143,8 +143,8 @@ el.limitBtn.addEventListener("click", () => {
     const { orderId, trades } = state.book.addLimitOrder(side, price, qty);
     recordTrades(trades);
     el.orderStatus.textContent = trades.length
-      ? `order #${orderId}: ${trades.length} fill(s), ${groups(trades.reduce((s, t) => s + t.qty, 0))} filled immediately.`
-      : `order #${orderId} rests on the book (no cross).`;
+      ? `Order #${orderId} was priced well enough to trade at once: ${groups(trades.reduce((s, t) => s + t.qty, 0))} traded across ${trades.length} fill(s), taken best price first and, within a price, from whoever had queued longest.`
+      : `Order #${orderId} was not priced to trade against anything on the other side, so it joins the queue at its price and waits for someone to come to it.`;
   } catch (err) {
     el.orderStatus.textContent = `rejected: ${err.message}`;
   }
@@ -160,8 +160,8 @@ el.marketBtn.addEventListener("click", () => {
     recordTrades(trades);
     const filled = trades.reduce((s, t) => s + t.qty, 0);
     el.orderStatus.textContent = trades.length
-      ? `market order #${orderId}: ${groups(filled)} filled across ${trades.length} level-crossing(s)${filled < qty ? ", book exhausted before the rest filled" : ""}.`
-      : `market order #${orderId}: nothing to match, opposite side of the book is empty.`;
+      ? `Market order #${orderId} asked for any price at all: ${groups(filled)} traded, walking through ${trades.length} price level(s) from the best outwards${filled < qty ? ", and the book ran out before the rest could fill" : ""}.`
+      : `Market order #${orderId} found nothing to trade with - the other side of the book is empty.`;
   } catch (err) {
     el.orderStatus.textContent = `rejected: ${err.message}`;
   }
@@ -172,7 +172,9 @@ el.marketBtn.addEventListener("click", () => {
 el.cancelBtn.addEventListener("click", () => {
   const id = Number(el.cancelInput.value);
   const ok = state.book.cancelOrder(id);
-  el.orderStatus.textContent = ok ? `order #${id} cancelled.` : `order #${id} is not a live resting order.`;
+  el.orderStatus.textContent = ok
+    ? `Order #${id} cancelled. Everyone else keeps the queue position they had - that is the part that is easy to get wrong.`
+    : `Order #${id} is not waiting in the book: it was already traded, already cancelled, or never existed.`;
   renderLadder();
 });
 

@@ -78,6 +78,7 @@ const traceEmpty = el('trace-empty');
 const traceCount = el('trace-count');
 const exampleRow = el('examples');
 const exampleNote = el('example-note');
+const headlineNote = el('headline-note');
 const status = el('status');
 
 const escapeHtml = (text) =>
@@ -182,6 +183,8 @@ function analyse() {
     renderHighlight(text, err.span);
     renderBindings([]);
     renderTrace([]);
+    headlineNote.textContent =
+      'The program could not even be read, so nothing was checked and nothing ran. The squiggle marks where it stopped making sense.';
     showError(err, text);
     status.textContent = 'parse error';
     status.classList.add('working');
@@ -200,6 +203,8 @@ function analyse() {
     renderHighlight(text, err.span);
     renderBindings([]);
     renderTrace([]);
+    headlineNote.textContent =
+      'The checker found two facts about this program that cannot both hold, so it refused to run it. That refusal is a bug caught before any user could meet it.';
     showError(err, text);
     status.textContent = 'type error';
     status.classList.add('working');
@@ -216,6 +221,8 @@ function analyse() {
   try {
     programValue.textContent = showValue(evaluate(ast));
     programValue.className = 'value result';
+    headlineNote.textContent =
+      `Nothing above was written down in the program: the checker worked out that the whole expression must be ${result.pretty}, found no contradiction, and only then ran it.`;
     renderHighlight(text, null);
     clearError();
   } catch (err) {
@@ -223,6 +230,8 @@ function analyse() {
     programValue.textContent = 'stopped';
     programValue.className = 'value unknown';
     renderHighlight(text, err.span);
+    headlineNote.textContent =
+      'The types were consistent, so this failed while running rather than while checking: the kind of fault no type system claims to catch, such as dividing by zero or taking the head of an empty list.';
     showError(err, text);
     status.textContent = 'runtime error';
     status.classList.add('working');

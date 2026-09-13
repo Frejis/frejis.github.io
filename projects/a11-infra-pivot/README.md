@@ -6,6 +6,8 @@ Five servers look unrelated until you notice they share a certificate and an SSH
 
 ## What you are looking at
 
+Investigators link servers that look unrelated by noticing small technical details two of them have in common - details set up once and then copied across machines. The skill is knowing which details are rare enough to mean something.
+
 A synthetic set of 90 hosts, each with a certificate, an SSH host key, a TLS client fingerprint, a favicon hash, and a hosting provider. Pick a shared trait and the selection grows to every host that has it, and the graph redraws to show the new cluster taking shape. A running trail on the right records every pivot so you can step back through how you got there. The catch: not every shared trait means anything, and the demo makes you feel that difference rather than just stating it.
 
 ## Why this was hard

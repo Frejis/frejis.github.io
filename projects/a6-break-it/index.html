@@ -21,6 +21,15 @@
   </p>
 </header>
 
+<section class="panel note">
+  Good locks get fitted badly. Every mistake below has shipped in real
+  software — a bank statement you could still read after it was encrypted, a
+  payment token an attacker could extend, a password check that gave itself
+  away by how long it took — and in each case the underlying cryptography was
+  fine and the way it was used was not. The five panels show the wrong use, the
+  attack it invites, and the correct alternative.
+</section>
+
 <nav class="attack-nav" aria-label="Jump to an attack">
   <a href="#ecb">1 · ECB penguin</a>
   <a href="#pad">2 · Nonce reuse</a>
@@ -44,6 +53,13 @@
       <span class="tag">difficulty: none</span>
     </div>
   </div>
+
+  <p class="faint">
+    In plain terms: the encryption is applied to each small chunk on its own, so
+    two identical chunks come out identical and the shape of the picture is
+    still there. The attacker does not get the key — they do not need it, they
+    can simply see the content.
+  </p>
 
   <p class="muted">
     A block cipher maps each 16-byte block to a ciphertext block, and does it
@@ -104,6 +120,13 @@
       <span class="tag">difficulty: statistics</span>
     </div>
   </div>
+
+  <p class="faint">
+    In plain terms: the cipher makes a one-off scrambling pattern from the key
+    and a number that must never repeat (the nonce). Repeat that number and two
+    messages get the same pattern, which cancels when you line them up. The
+    attacker recovers both messages and never touches the key.
+  </p>
 
   <p class="muted">
     A stream cipher turns the key and nonce into a keystream and XORs it with
@@ -186,6 +209,13 @@
     </div>
   </div>
 
+  <p class="faint">
+    In plain terms: the server refuses to decrypt anything for you, but it does
+    tell you whether a message you send is malformed. Answering that one
+    question thousands of times hands the attacker the entire plaintext, key or
+    no key.
+  </p>
+
   <p class="muted">
     The server below holds the key and will not decrypt anything for you. It
     answers exactly one question about any ciphertext you send: was the padding
@@ -243,6 +273,14 @@
       <span class="tag">difficulty: arithmetic</span>
     </div>
   </div>
+
+  <p class="faint">
+    In plain terms: the server stamps a message with a fingerprint computed from
+    a secret plus the message. Because of how the fingerprint is built, anyone
+    holding it can carry on from where it stopped and produce a valid stamp for
+    a longer message. The attacker appends whatever they like — here,
+    administrator rights — without ever learning the secret.
+  </p>
 
   <p class="muted">
     SHA-256 processes a message block by block, and its output <em>is</em> its
@@ -307,6 +345,13 @@
       <span class="tag">difficulty: measurement</span>
     </div>
   </div>
+
+  <p class="faint">
+    In plain terms: the check gives up the moment it hits a wrong character, so
+    a nearly-correct guess takes measurably longer than a badly wrong one. The
+    attacker reads the secret off the clock one character at a time, turning an
+    impossible search into a few thousand tries.
+  </p>
 
   <p class="muted">
     A comparison that returns as soon as it finds a mismatch takes slightly

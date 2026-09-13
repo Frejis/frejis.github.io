@@ -7,8 +7,14 @@ incapable of reading it.
 
 ## What you are looking at
 
+Almost every service you send a message through can read it, because the
+company holds the keys. Here nobody does but you and whoever you send the
+link to, and the page shows you the server's side of that arrangement while
+it happens.
+
 Type a secret on the left, click "Encrypt and upload", and watch the row
-land in "What the server stores" on the right — ciphertext, an IV, a
+land in "What the server stores" on the right — scrambled bytes
+(ciphertext), the random starting value they were scrambled with (an IV), a
 timestamp, nothing else. The decryption key travels only inside the share
 link's URL fragment, which browsers never transmit. Open that link back on
 this page and it decrypts client-side. Tamper with a stored row and try to
